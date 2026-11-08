@@ -2,6 +2,9 @@ import type { HA } from './types';
 const en = {
   remaining: 'Time remaining', temperature: 'Temperature', duration: 'Cooking time',
   mode: 'Program', start: 'Start cooking', pause: 'Pause', resume: 'Resume', stop: 'Stop',
+  start_selected: 'Start selected program', program_staged: 'Selected locally. Sent only when you press Start.',
+  discard_program: 'Discard program selection', turn_on: 'Turn on', turn_off: 'Turn off',
+  power_missing: 'Remote power control is not available here. Use the appliance’s power button.',
   preheat: 'Preheat', auto_keep_warm: 'Auto keep warm', current_keep_warm: 'Keep warm this cycle',
   weight: 'Cooking weight', reservation: 'Reservation time', measure: 'Food quantity',
   texture: 'Texture', reminder: 'Shake reminder', reminder_config: 'Shake reminder enabled',
@@ -25,6 +28,9 @@ type Key = keyof typeof en;
 const sr: Partial<Record<Key, string>> = {
   remaining: 'Preostalo vreme', temperature: 'Temperatura', duration: 'Vreme pripreme', mode: 'Program',
   start: 'Pokreni pripremu', pause: 'Pauziraj', resume: 'Nastavi', stop: 'Zaustavi',
+  start_selected: 'Pokreni izabrani program', program_staged: 'Izabrano lokalno. Šalje se tek kada pritisnete Pokreni.',
+  discard_program: 'Poništi izbor programa', turn_on: 'Uključi', turn_off: 'Isključi',
+  power_missing: 'Daljinsko uključivanje nije dostupno ovde. Koristite dugme na uređaju.',
   preheat: 'Predgrevanje', auto_keep_warm: 'Automatsko održavanje toplote',
   current_keep_warm: 'Održavanje toplote za ovaj ciklus', weight: 'Težina namirnica', reservation: 'Vreme rezervacije',
   measure: 'Količina hrane', texture: 'Tekstura', reminder: 'Podsetnik za okretanje',

@@ -40,7 +40,11 @@ export function fixture(offline = false): { ha: HA; inventory: Inventory; calls:
       calls.push({ domain, service, data });
       const id = String(data.entity_id);
       if (domain === 'number') states[id] = { ...states[id], state: String(data.value) };
-      if (domain === 'select') states[id] = { ...states[id], state: String(data.option) };
+      if (domain === 'select') {
+        states[id] = { ...states[id], state: String(data.option) };
+        // User-reported MAF10A behavior: mode selection itself can start cooking.
+        if (id === ids.mode) states[ids.air_fryer] = { ...states[ids.air_fryer], state: 'Cooking' };
+      }
       if (domain === 'switch') states[id] = { ...states[id], state: service === 'turn_on' ? 'on' : 'off' };
       if (domain === 'button') {
         const status = id === ids.start_cook || id === ids.resume_cook ? 'Cooking' : id === ids.pause ? 'Paused' : 'Idle';

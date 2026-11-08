@@ -23,7 +23,22 @@ omits names, options, values, unique IDs and arbitrary attributes. It documents 
 shape but is not sufficient to replay translated enum states. Never publish an
 unfiltered HA dump to obtain that missing evidence.
 
-The first version applies and confirms settings individually before enabling Start.
-There is no queued recipe/start transaction. A successful action call is shown as a
-request, not proof the appliance changed state. No automatic retries, scheduled
-cooking, wake-up, recipe upload, cloud credentials or manufacturer API calls.
+Numeric settings are applied and confirmed individually before enabling Start.
+As of 0.1.1, selecting a program changes local draft state only. An explicit Start
+sends the changed mode once; it does not send an additional Start action because
+the MAF10A user reports that a mode write itself starts cooking. If cooking is not
+reported within 35 seconds, show an observation timeout without retrying or sending
+a fallback Start. The unchanged-current-program path uses the ordinary Start button.
+This is regression-tested using a side-effect simulation, not a new hardware test.
+
+Power is a separate capability: recognize `power`, `on`, `switch` and Miot's main
+air-fryer switch semantics, always within the selected device. Reachable power can
+be controlled while cooking sensors are unavailable. Unavailable or ambiguous power
+cannot be dispatched. MAF10A's public spec has neither a writable power property nor
+a power action; its status is read-only and Cancel Cooking is not physical power-off.
+Without a genuine HA power switch the visible Power button is disabled with an
+explanation. The card does not add a manufacturer API, a smart plug or a status write.
+
+There is no queued recipe/start transaction. A successful action call is a request,
+not proof of a device state change. No automatic retries, scheduled cooking, recipe
+upload, cloud credentials or manufacturer API calls.

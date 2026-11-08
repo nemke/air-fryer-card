@@ -1,11 +1,13 @@
 {
   "name": "air-fryer-card",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Home Assistant air fryer card with automatic capability discovery",
   "type": "module",
   "private": true,
   "license": "MIT",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build && node scripts/check-build.mjs",
@@ -14,7 +16,9 @@
     "test:browser": "playwright test",
     "check": "npm run test && npm run build && npm run test:browser"
   },
-  "dependencies": { "lit": "3.3.3" },
+  "dependencies": {
+    "lit": "3.3.3"
+  },
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "tsx": "4.23.15",

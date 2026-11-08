@@ -43,6 +43,9 @@ export const styles = css`
   input[type=checkbox]:checked { background: var(--primary-color, #b5cda0); }
   input[type=checkbox]:checked::after { transform: translateX(15px); background: #26341e; }
   .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .power-row { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+  .power-row button { flex-shrink: 0; }
+  .power-row small { font-size: 11px; line-height: 1.5; }
   .actions button { flex: 1; }
   .error { padding: 11px 13px; border-radius: 10px; background: color-mix(in srgb, var(--error-color, #d77364) 13%, transparent); color: var(--error-color, #ffb3a5); font-size: 13px; line-height: 1.5; }
   .notice { font-size: 12px; line-height: 1.5; margin-top: 12px; }

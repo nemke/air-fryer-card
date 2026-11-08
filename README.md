@@ -52,7 +52,14 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
   Miot unique-ID fallback. It does not depend on English names or entity prefixes.
 - Edits temperature and cooking duration inline, using live min/max/step/unit metadata.
 - Shows real program options, preheat and automatic keep-warm controls.
+- Keeps program selection local until **Start selected program** is pressed. Some
+  fryers start cooking on a mode write; a changed program is therefore sent once
+  without an additional Start command. Discard a selection without sending anything.
 - Offers contextual Start, Pause, Resume and confirmed Stop for recognized MAF10A states.
+- Shows power on/off on the main card when a genuine power switch is discovered,
+  including Miot `on`/`switch` semantics. A reachable power switch works even when
+  cooking sensors are offline. Otherwise the card explains that physical power is
+  unavailable remotely. MAF10A's public spec exposes no separate power command.
 - Keeps additional settings under **More settings**, with diagnostics separate.
 - Retains controls when the fryer is offline; available action buttons do not imply
   the appliance is online.
@@ -61,8 +68,11 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
 - Provides an allowlisted schema download with identifiers and names replaced.
 
 Apply a changed numeric setting before Start. The card waits for the reported value
-to match before enabling another command. A successful action call is a request;
-the status changes when HA reports the new device state. No blind command retries.
+to match before enabling another command. Program changes are staged separately and
+never sent by the dropdown itself. Starting a changed program waits for a cooking
+phase to be reported; if that times out, check the appliance before trying again.
+No fallback Start is sent. Selecting the already-current program uses the normal
+Start button. A successful action call is a request, not proof the device changed state.
 
 MAF10A **Turn Pot** is a read-only shake reminder even if Miot exposes it as a select.
 **Turn Pot Config** is the separate writable reminder switch. No wake-up capability,

@@ -79,9 +79,80 @@ test('number commands use live bounds and original units', () => {
 });
 test('select command preserves exact whitespace and rejects a stale option', () => {
   const f = fixture(), d = discover(f.ha, f.inventory, config);
-  assert.equal(settingCommand(d.bindings.mode!, 'Steak ', d).data.option, 'Steak ');
-  assert.throws(() => settingCommand(d.bindings.mode!, 'Steak', d));
+  assert.equal(settingCommand(d.bindings.mode!, 'Steak ', d, 'start').data.option, 'Steak ');
+  assert.throws(() => settingCommand(d.bindings.mode!, 'Steak', d, 'start'));
+  assert.throws(() => settingCommand(d.bindings.mode!, 'Steak ', d), /only when you press Start/);
   assert.equal(settingCommand(d.bindings.preheat!, true, d).service, 'turn_on');
+});
+test('power detection recognizes Miot on/switch and main-service keys without stealing keep-warm', () => {
+  for (const key of ['air_fryer-on', 'air_fryer-switch', 'on', 'air_fryer']) {
+    const f = fixture();
+    f.inventory.entities.push({ entity_id: 'switch.actual_power', device_id: 'demo-fryer', platform: 'xiaomi_miot', translation_key: key });
+    const d = discover(f.ha, f.inventory, config);
+    assert.equal(d.bindings.power?.entity.entity_id, 'switch.actual_power');
+    assert.equal(d.bindings.auto_keep_warm?.entity.entity_id, f.ids.auto_keep_warm);
+  }
+});
+test('real power control is usable when cooking sensors are unavailable, without a cooking command', async () => {
+  const f = fixture(true), c = new Commander();
+  const entity = { entity_id: 'switch.actual_power', device_id: 'demo-fryer', platform: 'xiaomi_miot', translation_key: 'air_fryer-on' };
+  f.inventory.entities.push(entity);
+  f.ha.states[entity.entity_id] = { entity_id: entity.entity_id, state: 'off', attributes: {} };
+  const d = discover(f.ha, f.inventory, config);
+  assert.equal(d.online, false);
+  await c.run(() => ({ ...f, config }), entity.entity_id, true);
+  assert.deepEqual(f.calls, [{ domain: 'switch', service: 'turn_on', data: { entity_id: entity.entity_id } }]);
+  f.ha.states[entity.entity_id].state = 'unavailable';
+  await assert.rejects(c.run(() => ({ ...f, config }), entity.entity_id, false));
+  assert.equal(f.calls.length, 1);
+});
+test('default MAF10A schema never invents a power entity or status write', () => {
+  const f = fixture(), d = discover(f.ha, f.inventory, config);
+  assert.equal(d.bindings.power, undefined);
+  assert.throws(() => settingCommand(d.bindings.status!, false, d));
+  assert.equal(f.calls.length, 0);
+});
+test('staged program starts with one select call and no additional Start action', async () => {
+  const f = fixture(), c = new Commander();
+  await c.start(() => ({ ...f, config }), { entity_id: f.ids.mode, device_id: 'demo-fryer', option: 'Steak ' });
+  assert.deepEqual(f.calls, [{ domain: 'select', service: 'select_option', data: { entity_id: f.ids.mode, option: 'Steak ' } }]);
+  assert.equal(f.ha.states[f.ids.air_fryer].state, 'Cooking');
+});
+test('unchanged program uses the ordinary Start button exactly once', async () => {
+  const f = fixture(), c = new Commander();
+  await c.start(() => ({ ...f, config }), { entity_id: f.ids.mode, device_id: 'demo-fryer', option: 'Manual' });
+  assert.deepEqual(f.calls, [{ domain: 'button', service: 'press', data: { entity_id: f.ids.start_cook } }]);
+});
+test('stale device/binding/options are rejected before program dispatch', async () => {
+  for (const program of [
+    { entity_id: 'select.other', device_id: 'demo-fryer', option: 'Steak ' },
+    { entity_id: 'select.renamed_6', device_id: 'other', option: 'Steak ' },
+    { entity_id: 'select.renamed_6', device_id: 'demo-fryer', option: 'Removed option' },
+  ]) {
+    const f = fixture(), c = new Commander();
+    await assert.rejects(c.start(() => ({ ...f, config }), program)); assert.equal(f.calls.length, 0);
+  }
+});
+test('ordinary setting API cannot dispatch a program selection', async () => {
+  const f = fixture(), c = new Commander();
+  await assert.rejects(c.run(() => ({ ...f, config }), f.ids.mode, 'Steak '), /only when you press Start/);
+  assert.equal(f.calls.length, 0);
+});
+test('delayed cooking status and duplicate clicks never cause a second Start', async () => {
+  const f = fixture(), c = new Commander();
+  f.ha.callService = async (domain, service, data) => { f.calls.push({ domain, service, data }); f.ha.states[f.ids.mode].state = String(data.option); };
+  const pending = c.start(() => ({ ...f, config }), { entity_id: f.ids.mode, device_id: 'demo-fryer', option: 'Steak ' });
+  await new Promise(r => setTimeout(r, 10)); assert.equal(c.pending, true);
+  await assert.rejects(c.start(() => ({ ...f, config })), /pending/); assert.equal(f.calls.length, 1);
+  f.ha.states[f.ids.air_fryer].state = 'Cooking'; await pending; assert.equal(f.calls.length, 1);
+});
+test('program service failure or status timeout never falls back to Start', async () => {
+  for (const reject of [true, false]) {
+    const f = fixture(), c = new Commander(1);
+    f.ha.callService = async () => { f.calls.push('select'); if (reject) throw new Error('rejected'); };
+    await assert.rejects(c.start(() => ({ ...f, config }), { entity_id: f.ids.mode, device_id: 'demo-fryer', option: 'Steak ' }));
+    assert.equal(f.calls.length, 1); assert.equal(c.pending, false);
+  }
 });
 test('all 15 MAF10A states preserve phase, paused and completed meaning', () => {
   const f = fixture();

@@ -69,6 +69,8 @@ export interface Discovery {
   online: boolean;
 }
 export interface Inventory { entities: Entity[]; devices: Device[]; }
+// Selections are local drafts, never independently dispatchable settings.
+export interface ProgramDraft { entity_id: string; device_id: string; option: string; }
 export interface Cycle {
   phase: 'idle' | 'off' | 'cooking' | 'preheat' | 'warm' | 'delay' | 'unknown' | 'unavailable';
   paused: boolean;

@@ -273,3 +273,9 @@ marketing claims. The following task is the inline temperature/time/command UI.
 This document records the original plan. See README, CHANGELOG and COMPATIBILITY for
 the current implementation status. Version 0.1 applies/observes settings individually
 before Start; a queued settings-plus-start transaction remains future work.
+
+Version 0.1.1 keeps program selection local until explicit Start. The changed-program
+path treats a mode write as potentially starting and never sends a second Start.
+Power is promoted to the main UI when genuinely exposed, with Miot `on`/`switch`
+aliases and separate availability from cooking sensors. Unsupported power is explained
+without writing the read-only status or relabeling Stop as physical Off.

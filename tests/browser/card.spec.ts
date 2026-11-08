@@ -13,12 +13,45 @@ test('number edit uses the correct entity, bounds and value; blocks Start until 
   await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toBeEnabled();
   expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([{ domain: 'number', service: 'set_value', data: { entity_id: 'number.renamed_4', value: 230 } }]);
 });
-test('select preserves raw whitespace and locale changes do not send commands', async ({ page }) => {
+test('program selection is local, survives HA/locale updates, and sends one command only on Start', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Program', exact: true }).selectOption('Steak ');
-  await expect.poll(() => page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(1);
-  expect(await page.evaluate(() => (window as any).preview.sample.calls[0].data.option)).toBe('Steak ');
+  await page.waitForTimeout(450);
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+  await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toHaveValue('Steak ');
   await page.locator('#locale').click(); await expect(page.getByRole('spinbutton', { name: 'Temperatura', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+  await page.getByRole('button', { name: 'Pokreni izabrani program', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(1);
+  expect(await page.evaluate(() => (window as any).preview.sample.calls[0])).toEqual({ domain: 'select', service: 'select_option', data: { entity_id: 'select.renamed_6', option: 'Steak ' } });
+  await expect(page.getByRole('button', { name: 'Pauziraj', exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(1);
+});
+test('discarding or repeatedly changing a program sends no commands', async ({ page }) => {
+  const select = page.getByRole('combobox', { name: 'Program', exact: true });
+  await select.selectOption('Steak '); await select.selectOption('French Fries');
+  await page.getByRole('button', { name: 'Discard program selection', exact: true }).click();
+  await expect(select).toHaveValue('Manual');
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+});
+test('power is clearly unavailable when no real power entity exists', async ({ page }) => {
+  await expect(page.getByRole('button', { name: 'Power', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Power', exact: true })).toBeDisabled();
+  await expect(page.locator('air-fryer-card')).toContainText('Use the appliance’s power button');
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+});
+test('discovered power button is on the main card and works with offline cooking sensors', async ({ page }) => {
+  await page.getByRole('button', { name: 'Offline', exact: true }).click();
+  await page.evaluate(() => {
+    const p = (window as any).preview, f = p.sample, id = 'switch.actual_power';
+    f.ha.entities[id] = { entity_id: id, device_id: 'demo-fryer', platform: 'xiaomi_miot', translation_key: 'air_fryer-on' };
+    f.ha.states[id] = { entity_id: id, state: 'off', attributes: {} }; p.update();
+  });
+  await page.getByRole('button', { name: 'Turn on', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Turn off', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([{ domain: 'switch', service: 'turn_on', data: { entity_id: 'switch.actual_power' } }]);
+  await page.getByRole('button', { name: 'Turn off', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(2);
 });
 test('offline state keeps controls and recovers without reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Offline', exact: true }).click();

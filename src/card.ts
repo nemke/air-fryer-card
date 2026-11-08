@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import type { Binding, Config, Discovery, HA, Inventory, Role } from './types';
+import type { Binding, Config, Discovery, HA, Inventory, ProgramDraft, Role } from './types';
 import { discover, fryerDevices } from './discovery';
 import { cycle, durationLabel, remaining, seconds } from './cycle';
 import { actionAllowed, bounds, Commander } from './commands';
@@ -12,7 +12,7 @@ import { styles } from './styles';
 export class AirFryerCard extends LitElement {
   static styles = styles;
   static properties = { _ha: { state: true }, _config: { state: true }, _inventory: { state: true },
-    _error: { state: true }, _pending: { state: true }, _requested: { state: true }, _stop: { state: true }, _warning: { state: true } };
+    _error: { state: true }, _pending: { state: true }, _requested: { state: true }, _stop: { state: true }, _warning: { state: true }, _program: { state: true } };
   private _ha?: HA;
   private _config: Config = { type: 'custom:air-fryer-card' };
   private _inventory?: Inventory;
@@ -25,6 +25,7 @@ export class AirFryerCard extends LitElement {
   private _connection?: object;
   private _automaticDevice?: string;
   private _requestedStatus?: { id: string; state?: string };
+  private _program?: ProgramDraft;
   private commander = new Commander();
   private drafts = new Map<string, string>();
   set hass(ha: HA) {
@@ -41,7 +42,7 @@ export class AirFryerCard extends LitElement {
     if (this._pending) this.commander.cancel();
     if (this._config.device_id !== config.device_id) this._automaticDevice = undefined;
     this._config = { ...config, type: 'custom:air-fryer-card' };
-    this.drafts.clear(); this._stop = false; this._error = ''; this._requested = false;
+    this.drafts.clear(); this._program = undefined; this._stop = false; this._error = ''; this._requested = false;
   }
   static getConfigElement() { return document.createElement('air-fryer-card-editor'); }
   static getStubConfig() { return { type: 'custom:air-fryer-card' }; }
@@ -76,12 +77,13 @@ export class AirFryerCard extends LitElement {
     finally { this._pending = false; this.requestUpdate(); }
   }
   private async action(role: Role) {
-    if (this._pending || this.drafts.size) return;
+    if (this._pending || (role === 'start' && this.drafts.size)) return;
     this._pending = true; this._error = ''; this._requested = false; this._stop = false;
     const status = discover(this._ha!, this.inventory(), this.effectiveConfig()).bindings.status;
     const baseline = status ? { id: status.entity.entity_id, state: status.state?.state } : undefined;
     try {
-      await this.commander.action(this.environment, role);
+      if (role === 'start') { await this.commander.start(this.environment, this._program); this._program = undefined; }
+      else await this.commander.action(this.environment, role);
       this._requested = !baseline || this._ha?.states[baseline.id]?.state === baseline.state;
       this._requestedStatus = this._requested ? baseline : undefined;
     }
@@ -108,11 +110,20 @@ export class AirFryerCard extends LitElement {
         @change=${(e: Event) => { const input = e.target as HTMLInputElement; void this.change(b, input.checked); input.checked = b.state?.state === 'on'; }}></label>`;
     if (b.domain === 'select') {
       const options = Array.isArray(b.state?.attributes.options) ? b.state!.attributes.options.filter((v): v is string => typeof v === 'string') : [];
-      const current = b.state?.state || '';
+      const isProgram = b.role === 'mode';
+      const current = isProgram && this._program?.entity_id === id ? this._program.option : b.state?.state || '';
       return html`<div class="program"><label for=${id}>${label}</label><select id=${id} aria-label=${label}
-        ?disabled=${disabled || !options.length} @change=${(e: Event) => { const input = e.target as HTMLSelectElement; void this.change(b, input.value); input.value = current; }}>
+        ?disabled=${disabled || !options.length || (isProgram && !actionAllowed('start', d))} @change=${(e: Event) => {
+          const input = e.target as HTMLSelectElement;
+          if (isProgram) {
+            this._program = input.value === b.state?.state ? undefined : { entity_id: id, device_id: d.device!.id, option: input.value };
+            this._error = '';
+          } else { void this.change(b, input.value); input.value = current; }
+        }}>
         ${!options.includes(current) ? html`<option value="" selected>${b.available ? current : '—'}</option>` : nothing}
-        ${options.map(option => html`<option value=${option} ?selected=${current === option}>${option.trim()}</option>`)}</select></div>`;
+        ${options.map(option => html`<option value=${option} ?selected=${current === option}>${option.trim()}</option>`)}</select>
+        ${isProgram && this._program ? html`<p class="notice muted">${t(this._ha, 'program_staged')}</p>
+          <button ?disabled=${this._pending} @click=${() => this._program = undefined}>${t(this._ha, 'discard_program')}</button>` : nothing}</div>`;
     }
     const range = bounds(b), draft = this.drafts.get(id);
     const val = draft ?? (b.available ? b.state?.state || '' : '');
@@ -139,11 +150,12 @@ export class AirFryerCard extends LitElement {
     if (!d.device) return html`<ha-card><div class="body"><h2>Air Fryer</h2><p class="hint">${!this._inventory ? t(this._ha, 'loading') : fryerDevices(inv).length ? t(this._ha, 'choose') : t(this._ha, 'none')}</p>
       ${this._warning ? html`<p class="error">${this._warning}</p>` : nothing}</div></ha-card>`;
     const b = d.bindings;
+    if (this._program && (this._program.device_id !== d.device.id || this._program.entity_id !== b.mode?.entity.entity_id)) this._program = undefined;
     const configuring = s.phase === 'idle';
     const heroTime = configuring && b.duration?.available ? seconds(b.duration.state?.state, b.duration.state?.attributes.unit_of_measurement) : remaining(d);
     const status = s.phase === 'unknown' ? this.display(b.status) : s.phase === 'preheat' ? t(this._ha, 'preheat_phase') : t(this._ha, s.phase);
     const phasesuffix = s.paused ? t(this._ha, 'paused') : s.completed ? t(this._ha, 'completed') : '';
-    const secondary: Role[] = ['current_keep_warm', 'weight', 'reservation', 'measure', 'texture', 'reminder', 'reminder_config', 'power'];
+    const secondary: Role[] = ['current_keep_warm', 'weight', 'reservation', 'measure', 'texture', 'reminder', 'reminder_config'];
     const more = [...secondary.flatMap(role => b[role] ? [b[role]!] : []), ...d.extras];
     const noFault = d.adapter === 'xiaomi_miot' && d.device.model === 'careli.fryer.maf10a' ? ['0', 'no faults', 'no_faults'] : [];
     const fault = b.fault?.available && !noFault.includes(b.fault.state?.state.trim().toLowerCase() || '');
@@ -152,7 +164,7 @@ export class AirFryerCard extends LitElement {
         <div class="subtitle muted">${d.device.manufacturer || 'Air fryer'}</div></div>
         <span class="badge"><span class="dot"></span>${status}${phasesuffix ? ` · ${phasesuffix}` : ''}</span></header>
       <div class="hero"><div><div class="hero-label muted">${t(this._ha, configuring ? 'duration' : 'remaining')}</div><div class="time">${durationLabel(heroTime)}</div>
-        <div class="status">${b.mode ? this.display(b.mode) : status}</div>
+        <div class="status">${this._program ? this._program.option.trim() : b.mode ? this.display(b.mode) : status}</div>
         ${b.current_temperature ? html`<small>${t(this._ha, 'current_temperature')}: ${this.display(b.current_temperature)}</small>` : nothing}</div>
         <svg class="illustration" viewBox="0 0 118 134" aria-hidden="true"><rect x="15" y="10" width="88" height="116" rx="27" fill="currentColor" opacity=".12"/>
           <path d="M29 70h60v30a13 13 0 0 1-13 13H42a13 13 0 0 1-13-13Z" fill="currentColor" opacity=".18"/>
@@ -164,12 +176,17 @@ export class AirFryerCard extends LitElement {
       ${!d.online ? html`<p class="hint muted">${t(this._ha, 'offline_hint')}</p>` : nothing}
       ${s.reminder ? html`<p class="hint">${t(this._ha, 'shake')}</p>` : nothing}
       ${fault ? html`<p class="error">${t(this._ha, 'fault')}: ${this.display(b.fault)}</p>` : nothing}
+      <div class="power-row"><button aria-label=${b.power?.state?.state === 'on' ? t(this._ha, 'turn_off') : b.power?.state?.state === 'off' ? t(this._ha, 'turn_on') : t(this._ha, 'power')}
+        ?disabled=${this._pending || !b.power?.available || !b.power.writable || !['on', 'off'].includes(b.power.state?.state || '')}
+        @click=${() => { if (b.power) void this.change(b.power, b.power.state?.state !== 'on'); }}>
+        ⏻ ${b.power?.state?.state === 'on' ? t(this._ha, 'turn_off') : b.power?.state?.state === 'off' ? t(this._ha, 'turn_on') : t(this._ha, 'power')}</button>
+        ${!b.power ? html`<small>${t(this._ha, 'power_missing')}</small>` : nothing}</div>
       <div class="numbers">${(['target_temperature', 'duration'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}</div>
       ${b.mode ? this.control(b.mode, d) : nothing}
       ${(['preheat', 'auto_keep_warm'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}
       <div class="actions">${(['start', 'pause', 'resume', 'stop'] as Role[]).filter(role => b[role] && (actionAllowed(role, d) || !d.online)).map(role => html`
-        <button class=${role === 'start' || role === 'resume' ? 'primary' : ''} ?disabled=${this._pending || this.drafts.size > 0 || !actionAllowed(role, d)}
-          @click=${() => { if (role === 'stop') this._stop = true; else void this.action(role); }}>${t(this._ha, role as 'start' | 'pause' | 'resume' | 'stop')}</button>`)}</div>
+        <button class=${role === 'start' || role === 'resume' ? 'primary' : ''} ?disabled=${this._pending || (role === 'start' && this.drafts.size > 0) || !actionAllowed(role, d)}
+          @click=${() => { if (role === 'stop') this._stop = true; else void this.action(role); }}>${role === 'start' && this._program ? t(this._ha, 'start_selected') : t(this._ha, role as 'start' | 'pause' | 'resume' | 'stop')}</button>`)}</div>
       ${this._stop ? html`<div class="confirm" role="alertdialog" aria-label=${t(this._ha, 'confirm_stop')}><div>${t(this._ha, 'confirm_stop')}</div><div class="actions">
         <button @click=${() => this._stop = false}>${t(this._ha, 'cancel')}</button><button ?disabled=${this._pending} @click=${() => void this.action('stop')}>${t(this._ha, 'confirm')}</button></div></div>` : nothing}
       <div role="status" aria-live="polite">${this._pending ? html`<p class="notice muted">${t(this._ha, 'waiting')}</p>` : this._requested ? html`<p class="notice muted">${t(this._ha, 'requested')}</p>` : nothing}</div>

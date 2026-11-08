@@ -15,7 +15,7 @@ const aliases: Record<Role, string[]> = {
   preheat: ['preheat'], auto_keep_warm: ['auto_keep_warm'], current_keep_warm: ['current_keep_warm'],
   weight: ['cooking_weight'], reservation: ['reservation_left_time', 'appoint_time', 'appoint_time_left'],
   measure: ['target_cooking_measure', 'food_quanty'], texture: ['texture'],
-  reminder: ['turn_pot'], reminder_config: ['turn_pot_config', 'turn_pot_cfg'], power: ['power'],
+  reminder: ['turn_pot'], reminder_config: ['turn_pot_config', 'turn_pot_cfg'], power: ['power', 'on', 'switch'],
 };
 const domains: Record<Role, string[]> = {
   status: ['sensor'], remaining: ['sensor'], fault: ['sensor', 'binary_sensor'],
@@ -32,6 +32,7 @@ function semanticMatch(value: string, alias: string): boolean {
 }
 function score(entity: Entity, role: Role, domain: string): [number, string] {
   if (!domains[role].includes(domain)) return [0, 'incompatible domain'];
+  if (role === 'power' && entity.platform === 'xiaomi_miot' && semanticMatch(entity.translation_key || '', 'air_fryer')) return [100, 'Miot main power switch'];
   if (aliases[role].some(a => semanticMatch(entity.translation_key || '', a))) return [100, 'translation key'];
   // Miot unique IDs contain a device prefix followed by the semantic converter key.
   const uid = normalize(entity.unique_id || '');

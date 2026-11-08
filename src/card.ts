@@ -27,7 +27,7 @@ export class AirFryerCard extends LitElement {
   private _connection?: object;
   private _automaticDevice?: string;
   private _program?: ProgramDraft;
-  private commander = new Commander();
+  private commander = new Commander(35000, () => this.requestUpdate());
   private drafts = new Map<string, string>();
   set hass(ha: HA) {
     this._ha = ha;
@@ -143,7 +143,7 @@ export class AirFryerCard extends LitElement {
         @click=${() => void this.change(b, Number(draft))}>${t(this._ha, 'apply')}</button>` : nothing}</div>`;
   }
   private export(d: Discovery) {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot(d), null, 2)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot(d, this.commander.lastAction), null, 2)], { type: 'application/json' }));
     const a = document.createElement('a'); a.href = url; a.download = 'air-fryer-snapshot.json'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -203,7 +203,8 @@ export class AirFryerCard extends LitElement {
       ${s.paused && !b.resume ? html`<p class="notice muted">${t(this._ha, 'resume_missing')}</p>` : nothing}
       ${this._stop ? html`<div class="confirm" role="alertdialog" aria-label=${t(this._ha, 'confirm_stop')}><div>${t(this._ha, 'confirm_stop')}</div><div class="actions">
         <button @click=${() => this._stop = false}>${t(this._ha, 'cancel')}</button><button ?disabled=${this._pending} @click=${() => void this.action('stop')}>${t(this._ha, 'confirm')}</button></div></div>` : nothing}
-      <div role="status" aria-live="polite">${this._pending ? html`<p class="pending-notice">${this._pendingAction ? t(this._ha, 'action_wait') : t(this._ha, 'waiting')}</p>` : nothing}</div>
+      <div role="status" aria-live="polite">${this._pending ? html`<p class="pending-notice">${this._pendingAction ?
+        t(this._ha, this.commander.lastAction?.phase === 'accepted' ? 'accepted_wait' : 'action_wait') : t(this._ha, 'waiting')}</p>` : nothing}</div>
       ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : nothing}
       ${this.drafts.size ? html`<p class="notice muted">${t(this._ha, 'apply')} ${t(this._ha, 'temperature').toLowerCase()} / ${t(this._ha, 'duration').toLowerCase()}</p>` : nothing}
       ${Object.keys(d.ambiguous).length || this._warning ? html`<p class="notice muted">${t(this._ha, 'discovery_warning')}</p>` : nothing}
@@ -212,6 +213,11 @@ export class AirFryerCard extends LitElement {
         <dt>${t(this._ha, 'version')}</dt><dd>${VERSION}</dd>
         <dt>Adapter</dt><dd>${d.adapter}</dd>
         <dt>Post-command status refresh</dt><dd>${refresh ? `${refresh.domain}.${refresh.service}` : 'Reported state updates'}</dd>
+        ${this.commander.lastAction ? html`
+          <dt>Last command / result</dt><dd>${this.commander.lastAction.role} / ${this.commander.lastAction.phase}</dd>
+          <dt>HA service response</dt><dd>${this.commander.lastAction.serviceMs === undefined ? 'Pending' : `${this.commander.lastAction.serviceMs} ms`}${this.commander.lastAction.serviceFailed ? ' · failed' : ''}</dd>
+          <dt>Reported state confirmed</dt><dd>${this.commander.lastAction.confirmedMs === undefined ? 'Not yet confirmed' : `${this.commander.lastAction.confirmedMs} ms`}</dd>
+          <dt>Status refresh attempts / first request</dt><dd>${this.commander.lastAction.refreshes} / ${this.commander.lastAction.firstRefreshMs === undefined ? '—' : `${this.commander.lastAction.firstRefreshMs} ms`}${this.commander.lastAction.refreshFailed ? ' · refresh failed' : ''}</dd>` : nothing}
         <dt>Status state / raw attribute</dt><dd>${b.status?.state?.state || '—'} / ${String(b.status?.state?.attributes['air_fryer.status'] ?? '—')}</dd>
         ${Object.entries(d.bindings).map(([role, binding]) => html`<dt>${role}</dt><dd>${binding.entity.entity_id} · ${binding.evidence}${!binding.writable ? ` · ${t(this._ha, 'readonly')}` : ''}</dd>`)}
         ${Object.entries(d.ambiguous).map(([role, ids]) => html`<dt>${role}: ambiguous</dt><dd>${ids.join(', ')}</dd>`)}

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.5
+
+- Begin status observation and the bounded read burst when a cycle command is dispatched,
+  without waiting for its HA service response. This removes the remaining acknowledgement
+  gate in 0.1.4 for Start, changed-program Start, Pause, Resume and Stop.
+- Accept a genuinely reported target state while the service response is pending. Keep
+  handling early rejection, late responses, timeout and cancellation without retrying
+  control commands or replacing confirmed state with a service result.
+- Show separate HA service-response and reported-state-confirmation timings, first-read
+  timing, read count and failure flags in Discovery details and the sanitized export.
+  Pending text distinguishes command dispatch from HA acceptance.
+- Add regressions with both control and read responses held open, including the production
+  bundle. Hardware latency remains unmeasured; a fixed confirmation time is not promised.
+
 ## 0.1.4
 
 - Request fresh status after cycle commands instead of only waiting for a scheduled

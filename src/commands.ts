@@ -50,11 +50,22 @@ export function actionCommand(role: Role, d: Discovery): Command {
   return { domain: 'button', service: 'press', data: { entity_id: d.bindings[role]!.entity.entity_id } };
 }
 export interface Environment { ha: HA; inventory: Inventory; config: Config; }
+export interface ActionTiming {
+  role: Role;
+  phase: 'sending' | 'accepted' | 'confirmed' | 'failed' | 'cancelled';
+  serviceMs?: number;
+  confirmedMs?: number;
+  firstRefreshMs?: number;
+  refreshes: number;
+  refreshFailed: boolean;
+  serviceFailed: boolean;
+}
 // Re-read current metadata at dispatch time; never execute a plan from a stale render.
 export class Commander {
   pending = false;
+  lastAction?: ActionTiming;
   private abort?: AbortController;
-  constructor(private readonly observationTimeoutMs = 35000) {}
+  constructor(private readonly observationTimeoutMs = 35000, private readonly onProgress?: () => void) {}
   cancel() { this.abort?.abort(); }
   async run(getEnvironment: () => Environment, entityId: string, value: unknown): Promise<void> {
     await this.lock(async () => {
@@ -74,8 +85,7 @@ export class Commander {
   async action(getEnvironment: () => Environment, role: Role): Promise<void> {
     await this.lock(async () => {
       const e = getEnvironment(), d = discover(e.ha, e.inventory, e.config), c = actionCommand(role, d);
-      await e.ha.callService(c.domain, c.service, c.data);
-      await this.observeAction(getEnvironment, role, d.device!.id);
+      await this.dispatchAndObserve(e.ha, c, getEnvironment, role, d.device!.id);
     });
   }
   async start(getEnvironment: () => Environment, program?: ProgramDraft): Promise<void> {
@@ -88,22 +98,60 @@ export class Commander {
         if (!b || program.entity_id !== b.entity.entity_id || program.device_id !== d.device?.id) throw new Error('The program control has changed. Select the program again.');
         const command = settingCommand(b, program.option, d, 'start');
         if (b.state?.state !== program.option) {
-          await e.ha.callService(command.domain, command.service, command.data);
           // The MAF10A user reports selecting a mode starts cooking. Treat program
           // writes as potentially starting: never follow one with button.press,
           // including delayed status, failed service and observation timeout paths.
-          await this.observeAction(getEnvironment, 'start', program.device_id);
+          await this.dispatchAndObserve(e.ha, command, getEnvironment, 'start', program.device_id);
           return;
         }
       }
-      await e.ha.callService(normalStart.domain, normalStart.service, normalStart.data);
-      await this.observeAction(getEnvironment, 'start', d.device!.id);
+      await this.dispatchAndObserve(e.ha, normalStart, getEnvironment, 'start', d.device!.id);
     });
   }
-  private async observeAction(getEnvironment: () => Environment, role: Role, deviceId: string): Promise<void> {
+  private async dispatchAndObserve(ha: HA, command: Command, getEnvironment: () => Environment, role: Role, deviceId: string): Promise<void> {
+    const started = Date.now();
+    const timing: ActionTiming = { role, phase: 'sending', refreshes: 0, refreshFailed: false, serviceFailed: false };
+    this.lastAction = timing;
+    const notify = () => { if (this.lastAction === timing) this.onProgress?.(); };
+    notify();
+    let serviceRejected = false, serviceError: unknown;
+    try {
+      let service: Promise<unknown>;
+      try { service = ha.callService(command.domain, command.service, command.data); }
+      catch (error) {
+        timing.serviceMs = Date.now() - started; timing.serviceFailed = true;
+        throw error;
+      }
+      // Dispatch once. Refresh/observation must not sit behind a slow HA service
+      // response. A reported target state is valid even while that response is open.
+      void Promise.resolve(service).then(() => {
+        timing.serviceMs = Date.now() - started;
+        if (timing.phase === 'sending') timing.phase = 'accepted';
+        notify();
+      }, error => {
+        serviceRejected = true; serviceError = error;
+        timing.serviceMs = Date.now() - started; timing.serviceFailed = true;
+        // A late service error cannot undo a genuinely observed device state.
+        notify();
+      });
+      await this.observeAction(getEnvironment, role, deviceId, () => {
+        if (serviceRejected) throw serviceError instanceof Error ? serviceError : new Error('The HA command service failed.');
+      }, () => {
+        timing.firstRefreshMs ??= Date.now() - started;
+        timing.refreshes++; notify();
+      }, () => { timing.refreshFailed = true; notify(); });
+      timing.confirmedMs = Date.now() - started; timing.phase = 'confirmed'; notify();
+    } catch (error) {
+      timing.phase = this.abort?.signal.aborted ? 'cancelled' : 'failed'; notify();
+      throw error;
+    }
+  }
+  private async observeAction(getEnvironment: () => Environment, role: Role, deviceId: string,
+    checkService?: () => void, onRefresh?: () => void, onRefreshError?: () => void): Promise<void> {
     const initial = getEnvironment();
     const plan = statusRefresh(initial.ha, discover(initial.ha, initial.inventory, initial.config));
     await this.observe(() => {
+      checkService?.();
       const fresh = getEnvironment(), current = discover(fresh.ha, fresh.inventory, fresh.config);
       if (current.device?.id !== deviceId) throw new Error('The selected device has changed. Check the appliance state.');
       const s = cycle(current);
@@ -114,10 +162,13 @@ export class Commander {
       const fresh = getEnvironment(), d = discover(fresh.ha, fresh.inventory, fresh.config);
       if (d.device?.id !== deviceId) return undefined;
       const command = statusRefresh(fresh.ha, d);
-      return command ? fresh.ha.callService(command.domain, command.service, command.data) : undefined;
-    }, plan?.domain === 'xiaomi_miot' && plan.service === 'get_properties' ? 2 : 1);
+      if (!command) return undefined;
+      onRefresh?.();
+      return fresh.ha.callService(command.domain, command.service, command.data);
+    }, plan?.domain === 'xiaomi_miot' && plan.service === 'get_properties' ? 2 : 1, onRefreshError);
   }
-  private async observe(confirmed: () => boolean, timeoutMessage: string, refresh?: () => Promise<unknown> | undefined, maxRefreshPending = 1): Promise<void> {
+  private async observe(confirmed: () => boolean, timeoutMessage: string, refresh?: () => Promise<unknown> | undefined,
+    maxRefreshPending = 1, onRefreshError?: () => void): Promise<void> {
     const started = Date.now(), deadline = started + this.observationTimeoutMs;
     const signal = this.abort?.signal;
     let active = true, inFlight = 0, refreshStopped = false, refreshIndex = 0, lastRefresh = -Infinity;
@@ -138,7 +189,7 @@ export class Commander {
             const result = refresh();
             if (!result) refreshStopped = true;
             return result;
-          }).catch(() => { refreshStopped = true; }).finally(() => { inFlight--; });
+          }).catch(() => { refreshStopped = true; if (active) onRefreshError?.(); }).finally(() => { inFlight--; });
         }
         await new Promise<void>(resolve => {
           const done = () => { clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); };

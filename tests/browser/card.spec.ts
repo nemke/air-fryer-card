@@ -99,7 +99,7 @@ test('Pause shows progress then Resume despite a stale raw Cooking attribute', a
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(2);
 });
-test('post-command direct read confirms Pause without the periodic HA update or refresh acknowledgement', async ({ page }) => {
+test('direct read confirms Pause without periodic updates or control/refresh acknowledgements', async ({ page }) => {
   await page.getByRole('button', { name: 'Cooking', exact: true }).click();
   await page.evaluate(() => {
     const p = (window as any).preview, f = p.sample;
@@ -108,18 +108,43 @@ test('post-command direct read confirms Pause without the periodic HA update or 
       f.calls.push({ domain, service, data });
       if (service === 'get_properties') {
         f.ha.states[f.ids.air_fryer].state = 'Paused';
-        await new Promise<void>(() => {});
       }
+      await new Promise<void>(() => {});
     };
     p.update(); p.stopUpdates();
   });
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pausing…', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled({ timeout: 2500 });
+  await page.locator('air-fryer-card summary').filter({ hasText: 'Discovery details' }).click();
+  await expect(page.locator('air-fryer-card')).toContainText('pause / confirmed');
+  await expect(page.locator('air-fryer-card dt').filter({ hasText: 'HA service response' }).locator('+ dd')).toHaveText('Pending');
   expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([
     { domain: 'button', service: 'press', data: { entity_id: 'button.renamed_17' } },
     { domain: 'xiaomi_miot', service: 'get_properties', data: { entity_id: ['sensor.renamed_1'], mapping: [{ siid: 2, piid: 1 }], update_entity: true } },
   ]);
+});
+test('accepted command stays pending until a reported state arrives and exposes separate timings', async ({ page }) => {
+  await page.evaluate(() => {
+    const p = (window as any).preview;
+    p.sample.ha.callService = async () => {};
+    p.stopUpdates();
+  });
+  await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Starting…', exact: true })).toBeDisabled();
+  await expect(page.locator('air-fryer-card')).toContainText('HA accepted the command. Waiting for a fresh status report.');
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
+  await page.locator('air-fryer-card summary').filter({ hasText: 'Discovery details' }).click();
+  const service = page.locator('air-fryer-card dt').filter({ hasText: 'HA service response' }).locator('+ dd');
+  const confirmed = page.locator('air-fryer-card dt').filter({ hasText: 'Reported state confirmed' }).locator('+ dd');
+  await expect(service).toHaveText(/^\d+ ms$/);
+  await expect(confirmed).toHaveText('Not yet confirmed');
+  await page.evaluate(() => {
+    const p = (window as any).preview;
+    p.sample.ha.states[p.sample.ids.air_fryer].state = 'Cooking';
+  });
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
+  await expect(confirmed).toHaveText(/^\d+ ms$/);
 });
 test('missing Resume binding is visible and explained instead of retaining Pause', async ({ page }) => {
   await page.getByRole('button', { name: 'Paused', exact: true }).click();
@@ -222,8 +247,8 @@ test('production bundle registers and controls the fixture without external runt
       f.calls.push({ domain, service, data });
       if (service === 'get_properties') {
         f.ha.states[f.ids.air_fryer].state = 'Cooking';
-        await new Promise<void>(() => {});
       }
+      await new Promise<void>(() => {});
     };
     card.setConfig({ type: 'custom:air-fryer-card' }); card.hass = f.ha;
     document.body.append(card); (window as any).bundleFixture = f;

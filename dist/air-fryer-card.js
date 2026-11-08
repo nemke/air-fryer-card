@@ -1081,8 +1081,8 @@ function $e(e, t) {
 	};
 }
 var et = class {
-	constructor(e = 35e3) {
-		this.observationTimeoutMs = e, this.pending = !1;
+	constructor(e = 35e3, t) {
+		this.observationTimeoutMs = e, this.onProgress = t, this.pending = !1;
 	}
 	cancel() {
 		this.abort?.abort();
@@ -1103,7 +1103,7 @@ var et = class {
 	async action(e, t) {
 		await this.lock(async () => {
 			let n = e(), r = q(n.ha, n.inventory, n.config), i = $e(t, r);
-			await n.ha.callService(i.domain, i.service, i.data), await this.observeAction(e, t, r.device.id);
+			await this.dispatchAndObserve(n.ha, i, e, t, r.device.id);
 		});
 	}
 	async start(e, t) {
@@ -1114,56 +1114,93 @@ var et = class {
 				if (!i || t.entity_id !== i.entity.entity_id || t.device_id !== r.device?.id) throw Error("The program control has changed. Select the program again.");
 				let a = Qe(i, t.option, r, "start");
 				if (i.state?.state !== t.option) {
-					await n.ha.callService(a.domain, a.service, a.data), await this.observeAction(e, "start", t.device_id);
+					await this.dispatchAndObserve(n.ha, a, e, "start", t.device_id);
 					return;
 				}
 			}
-			await n.ha.callService(i.domain, i.service, i.data), await this.observeAction(e, "start", r.device.id);
+			await this.dispatchAndObserve(n.ha, i, e, "start", r.device.id);
 		});
 	}
-	async observeAction(e, t, n) {
-		let r = e(), i = Xe(r.ha, q(r.ha, r.inventory, r.config));
+	async dispatchAndObserve(e, t, n, r, i) {
+		let a = Date.now(), o = {
+			role: r,
+			phase: "sending",
+			refreshes: 0,
+			refreshFailed: !1,
+			serviceFailed: !1
+		};
+		this.lastAction = o;
+		let s = () => {
+			this.lastAction === o && this.onProgress?.();
+		};
+		s();
+		let c = !1, l;
+		try {
+			let u;
+			try {
+				u = e.callService(t.domain, t.service, t.data);
+			} catch (e) {
+				throw o.serviceMs = Date.now() - a, o.serviceFailed = !0, e;
+			}
+			Promise.resolve(u).then(() => {
+				o.serviceMs = Date.now() - a, o.phase === "sending" && (o.phase = "accepted"), s();
+			}, (e) => {
+				c = !0, l = e, o.serviceMs = Date.now() - a, o.serviceFailed = !0, s();
+			}), await this.observeAction(n, r, i, () => {
+				if (c) throw l instanceof Error ? l : /* @__PURE__ */ Error("The HA command service failed.");
+			}, () => {
+				o.firstRefreshMs ??= Date.now() - a, o.refreshes++, s();
+			}, () => {
+				o.refreshFailed = !0, s();
+			}), o.confirmedMs = Date.now() - a, o.phase = "confirmed", s();
+		} catch (e) {
+			throw o.phase = this.abort?.signal.aborted ? "cancelled" : "failed", s(), e;
+		}
+	}
+	async observeAction(e, t, n, r, i, a) {
+		let o = e(), s = Xe(o.ha, q(o.ha, o.inventory, o.config));
 		await this.observe(() => {
-			let r = e(), i = q(r.ha, r.inventory, r.config);
-			if (i.device?.id !== n) throw Error("The selected device has changed. Check the appliance state.");
-			let a = Ge(i);
-			return t === "pause" ? a.paused : t === "stop" ? a.phase === "idle" || a.phase === "off" || a.completed : [
+			r?.();
+			let i = e(), a = q(i.ha, i.inventory, i.config);
+			if (a.device?.id !== n) throw Error("The selected device has changed. Check the appliance state.");
+			let o = Ge(a);
+			return t === "pause" ? o.paused : t === "stop" ? o.phase === "idle" || o.phase === "off" || o.completed : [
 				"cooking",
 				"preheat",
 				"warm",
 				"delay"
-			].includes(a.phase) && !a.paused && !a.completed;
+			].includes(o.phase) && !o.paused && !o.completed;
 		}, "The device has not confirmed this action. Check its state before trying again.", () => {
 			let t = e(), r = q(t.ha, t.inventory, t.config);
 			if (r.device?.id !== n) return;
-			let i = Xe(t.ha, r);
-			return i ? t.ha.callService(i.domain, i.service, i.data) : void 0;
-		}, i?.domain === "xiaomi_miot" && i.service === "get_properties" ? 2 : 1);
+			let a = Xe(t.ha, r);
+			if (a) return i?.(), t.ha.callService(a.domain, a.service, a.data);
+		}, s?.domain === "xiaomi_miot" && s.service === "get_properties" ? 2 : 1, a);
 	}
-	async observe(e, t, n, r = 1) {
-		let i = Date.now(), a = i + this.observationTimeoutMs, o = this.abort?.signal, s = !0, c = 0, l = !1, u = 0, d = -Infinity;
+	async observe(e, t, n, r = 1, i) {
+		let a = Date.now(), o = a + this.observationTimeoutMs, s = this.abort?.signal, c = !0, l = 0, u = !1, d = 0, f = -Infinity;
 		try {
 			for (; !e();) {
-				if (o?.aborted) throw Error("Command observation cancelled.");
-				let f = Date.now();
-				if (f > a) throw Error(t);
-				n && !l && c < r && u < Ye.length && f - i >= Ye[u] && f - d >= 1e3 && (u++, d = f, c++, Promise.resolve().then(() => {
-					if (!s || o?.aborted || e()) return;
+				if (s?.aborted) throw Error("Command observation cancelled.");
+				let p = Date.now();
+				if (p > o) throw Error(t);
+				n && !u && l < r && d < Ye.length && p - a >= Ye[d] && p - f >= 1e3 && (d++, f = p, l++, Promise.resolve().then(() => {
+					if (!c || s?.aborted || e()) return;
 					let t = n();
-					return t || (l = !0), t;
+					return t || (u = !0), t;
 				}).catch(() => {
-					l = !0;
+					u = !0, c && i?.();
 				}).finally(() => {
-					c--;
+					l--;
 				})), await new Promise((e) => {
 					let t = () => {
-						clearTimeout(n), o?.removeEventListener("abort", t), e();
+						clearTimeout(n), s?.removeEventListener("abort", t), e();
 					}, n = setTimeout(t, 100);
-					o?.addEventListener("abort", t, { once: !0 });
+					s?.addEventListener("abort", t, { once: !0 });
 				});
 			}
 		} finally {
-			s = !1;
+			c = !1;
 		}
 	}
 	async lock(e) {
@@ -1264,7 +1301,8 @@ var at = {
 	resuming: "Resuming…",
 	stopping: "Stopping…",
 	power_unavailable: "Power control is currently unavailable. Check the appliance connection.",
-	action_wait: "Waiting for the device to update. You only need to press once.",
+	action_wait: "Command sent. Waiting for a fresh HA status report. You only need to press once.",
+	accepted_wait: "HA accepted the command. Waiting for a fresh status report. You only need to press once.",
 	version: "Loaded card version",
 	resume_missing: "Resume is not bound. Check discovery details and the Resume override in the card editor.",
 	power_missing: "Remote power control is not available here. Use the appliance’s power button.",
@@ -1337,7 +1375,8 @@ var at = {
 	resuming: "Nastavljanje…",
 	stopping: "Zaustavljanje…",
 	power_unavailable: "Napajanje trenutno nije dostupno za kontrolu. Proverite vezu uređaja.",
-	action_wait: "Čekanje novog stanja uređaja. Dovoljan je jedan pritisak.",
+	action_wait: "Komanda je poslata. Čekanje novog izveštaja stanja iz HA. Dovoljan je jedan pritisak.",
+	accepted_wait: "HA je prihvatio komandu. Čekanje novog izveštaja stanja. Dovoljan je jedan pritisak.",
 	version: "Učitana verzija kartice",
 	resume_missing: "Nastavljanje nije povezano. Proverite detalje otkrivanja i opciju Resume u editoru kartice.",
 	power_missing: "Daljinsko uključivanje nije dostupno ovde. Koristite dugme na uređaju.",
@@ -1394,21 +1433,31 @@ function Z(e, t) {
 	return (e?.locale?.language || e?.language || "").startsWith("sr") && ot[t] || at[t];
 }
 // src/version.ts
-var Q = "0.1.4";
+var Q = "0.1.5";
 // src/snapshot.ts
-function st(e) {
-	let t = [
+function st(e, t) {
+	let n = [
 		...Object.values(e.bindings),
 		...e.extras,
 		...e.diagnostics
-	], n = /* @__PURE__ */ new Set();
+	], r = /* @__PURE__ */ new Set();
 	return {
 		schema: 1,
 		card_version: Q,
 		source: "selected-device card snapshot",
 		adapter: e.adapter,
+		last_action: t ? {
+			role: t.role,
+			phase: t.phase,
+			service_ms: t.serviceMs,
+			confirmed_ms: t.confirmedMs,
+			first_refresh_ms: t.firstRefreshMs,
+			refreshes: t.refreshes,
+			refresh_failed: t.refreshFailed,
+			service_failed: t.serviceFailed
+		} : void 0,
 		model: e.device?.model === "careli.fryer.maf10a" ? "careli.fryer.maf10a" : "other",
-		entities: t.filter((e) => !n.has(e.entity.entity_id) && (n.add(e.entity.entity_id), !0)).map((e, t) => {
+		entities: n.filter((e) => !r.has(e.entity.entity_id) && (r.add(e.entity.entity_id), !0)).map((e, t) => {
 			let n = e.state?.attributes || {}, r = {};
 			for (let e of [
 				"min",
@@ -1514,7 +1563,7 @@ var ct = o`
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 `, lt = class extends z {
 	constructor(...e) {
-		super(...e), this._config = { type: "custom:air-fryer-card" }, this._error = "", this._warning = "", this._pending = !1, this._stop = !1, this.commander = new et(), this.drafts = /* @__PURE__ */ new Map(), this.environment = () => ({
+		super(...e), this._config = { type: "custom:air-fryer-card" }, this._error = "", this._warning = "", this._pending = !1, this._stop = !1, this.commander = new et(35e3, () => this.requestUpdate()), this.drafts = /* @__PURE__ */ new Map(), this.environment = () => ({
 			ha: this._ha,
 			inventory: this.inventory(),
 			config: this.effectiveConfig()
@@ -1681,7 +1730,7 @@ var ct = o`
         @click=${() => void this.change(e, Number(o))}>${Z(this._ha, "apply")}</button>`}</div>`;
 	}
 	export(e) {
-		let t = URL.createObjectURL(new Blob([JSON.stringify(st(e), null, 2)], { type: "application/json" })), n = document.createElement("a");
+		let t = URL.createObjectURL(new Blob([JSON.stringify(st(e, this.commander.lastAction), null, 2)], { type: "application/json" })), n = document.createElement("a");
 		n.href = t, n.download = "air-fryer-snapshot.json", n.click(), setTimeout(() => URL.revokeObjectURL(t), 1e3);
 	}
 	render() {
@@ -1749,7 +1798,7 @@ var ct = o`
       ${n.paused && !r.resume ? A`<p class="notice muted">${Z(this._ha, "resume_missing")}</p>` : M}
       ${this._stop ? A`<div class="confirm" role="alertdialog" aria-label=${Z(this._ha, "confirm_stop")}><div>${Z(this._ha, "confirm_stop")}</div><div class="actions">
         <button @click=${() => this._stop = !1}>${Z(this._ha, "cancel")}</button><button ?disabled=${this._pending} @click=${() => void this.action("stop")}>${Z(this._ha, "confirm")}</button></div></div>` : M}
-      <div role="status" aria-live="polite">${this._pending ? A`<p class="pending-notice">${this._pendingAction ? Z(this._ha, "action_wait") : Z(this._ha, "waiting")}</p>` : M}</div>
+      <div role="status" aria-live="polite">${this._pending ? A`<p class="pending-notice">${this._pendingAction ? Z(this._ha, this.commander.lastAction?.phase === "accepted" ? "accepted_wait" : "action_wait") : Z(this._ha, "waiting")}</p>` : M}</div>
       ${this._error ? A`<p class="error" role="alert">${this._error}</p>` : M}
       ${this.drafts.size ? A`<p class="notice muted">${Z(this._ha, "apply")} ${Z(this._ha, "temperature").toLowerCase()} / ${Z(this._ha, "duration").toLowerCase()}</p>` : M}
       ${Object.keys(t.ambiguous).length || this._warning ? A`<p class="notice muted">${Z(this._ha, "discovery_warning")}</p>` : M}
@@ -1758,6 +1807,11 @@ var ct = o`
         <dt>${Z(this._ha, "version")}</dt><dd>${Q}</dd>
         <dt>Adapter</dt><dd>${t.adapter}</dd>
         <dt>Post-command status refresh</dt><dd>${f ? `${f.domain}.${f.service}` : "Reported state updates"}</dd>
+        ${this.commander.lastAction ? A`
+          <dt>Last command / result</dt><dd>${this.commander.lastAction.role} / ${this.commander.lastAction.phase}</dd>
+          <dt>HA service response</dt><dd>${this.commander.lastAction.serviceMs === void 0 ? "Pending" : `${this.commander.lastAction.serviceMs} ms`}${this.commander.lastAction.serviceFailed ? " · failed" : ""}</dd>
+          <dt>Reported state confirmed</dt><dd>${this.commander.lastAction.confirmedMs === void 0 ? "Not yet confirmed" : `${this.commander.lastAction.confirmedMs} ms`}</dd>
+          <dt>Status refresh attempts / first request</dt><dd>${this.commander.lastAction.refreshes} / ${this.commander.lastAction.firstRefreshMs === void 0 ? "—" : `${this.commander.lastAction.firstRefreshMs} ms`}${this.commander.lastAction.refreshFailed ? " · refresh failed" : ""}</dd>` : M}
         <dt>Status state / raw attribute</dt><dd>${r.status?.state?.state || "—"} / ${String(r.status?.state?.attributes["air_fryer.status"] ?? "—")}</dd>
         ${Object.entries(t.bindings).map(([e, t]) => A`<dt>${e}</dt><dd>${t.entity.entity_id} · ${t.evidence}${t.writable ? "" : ` · ${Z(this._ha, "readonly")}`}</dd>`)}
         ${Object.entries(t.ambiguous).map(([e, t]) => A`<dt>${e}: ambiguous</dt><dd>${t.join(", ")}</dd>`)}

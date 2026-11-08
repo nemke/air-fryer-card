@@ -266,6 +266,81 @@ test('fresh status unlocks Pause before the refresh service acknowledgement fini
   await c.action(() => ({ ...f, config }), 'pause');
   assert.equal(c.pending, false); assert.equal(reads, 1); assert.equal(f.calls.length, 2);
 });
+test('direct status reads begin before the control service responds, including changed-program Start', async () => {
+  for (const changedProgram of [false, true]) {
+    const f = fixture(), c = new Commander(1500);
+    f.ha.services = { xiaomi_miot: { get_properties: {} } };
+    f.ha.callService = async (domain, service, data) => {
+      f.calls.push({ domain, service, data });
+      if (service === 'get_properties') f.ha.states[f.ids.air_fryer].state = 'Cooking';
+      await new Promise<void>(() => {}); // Both control and read responses remain open.
+    };
+    await c.start(() => ({ ...f, config }), changedProgram ? {
+      entity_id: f.ids.mode, device_id: 'demo-fryer', option: 'Steak ',
+    } : undefined);
+    assert.equal(c.pending, false); assert.equal(f.calls.length, 2);
+    assert.equal((f.calls[0] as { service: string }).service, changedProgram ? 'select_option' : 'press');
+    assert.equal(c.lastAction?.phase, 'confirmed'); assert.equal(c.lastAction.serviceMs, undefined);
+    assert.equal(c.lastAction.refreshes, 1); assert.ok(c.lastAction.firstRefreshMs! >= 250);
+    assert.ok(c.lastAction.confirmedMs! >= c.lastAction.firstRefreshMs!);
+  }
+});
+test('pushed state confirms Pause before control acknowledgement even without a refresh service', async () => {
+  const f = fixture(), c = new Commander(1000); f.ha.states[f.ids.air_fryer].state = 'Cooking';
+  let acknowledge!: () => void;
+  f.ha.callService = async () => {
+    setTimeout(() => { f.ha.states[f.ids.air_fryer].state = 'Paused'; }, 20);
+    await new Promise<void>(resolve => { acknowledge = resolve; });
+  };
+  await c.action(() => ({ ...f, config }), 'pause');
+  assert.equal(c.pending, false); assert.equal(c.lastAction?.phase, 'confirmed');
+  assert.equal(c.lastAction.serviceMs, undefined); assert.equal(c.lastAction.refreshes, 0);
+  acknowledge(); await Promise.resolve(); await Promise.resolve();
+  assert.equal(c.lastAction.phase, 'confirmed'); assert.equal(typeof c.lastAction.serviceMs, 'number');
+});
+test('late service rejection is handled without undoing confirmation or overwriting a newer action', async () => {
+  const f = fixture(); let updates = 0;
+  const c = new Commander(1000, () => { updates++; }); let reject!: (error: Error) => void;
+  f.ha.callService = async () => {
+    f.ha.states[f.ids.air_fryer].state = 'Cooking';
+    await new Promise<void>((_, r) => { reject = r; });
+  };
+  await c.start(() => ({ ...f, config })); const oldTiming = c.lastAction!;
+  f.ha.callService = async () => { f.ha.states[f.ids.air_fryer].state = 'Paused'; };
+  await c.action(() => ({ ...f, config }), 'pause'); const currentTiming = c.lastAction!, before = updates;
+  reject(new Error('late response error')); await new Promise(r => setTimeout(r, 0));
+  assert.equal(oldTiming.phase, 'confirmed'); assert.equal(oldTiming.serviceFailed, true);
+  assert.equal(c.lastAction, currentTiming); assert.equal(currentTiming.role, 'pause');
+  assert.equal(currentTiming.serviceFailed, false); assert.equal(updates, before);
+});
+test('a pending control response cannot prevent timeout or cancellation', async () => {
+  for (const cancel of [false, true]) {
+    const f = fixture(), c = new Commander(cancel ? 2000 : 1);
+    f.ha.services = { xiaomi_miot: { get_properties: {} } };
+    f.ha.callService = async () => { f.calls.push('control'); await new Promise<void>(() => {}); };
+    const promise = c.start(() => ({ ...f, config }));
+    if (cancel) c.cancel();
+    await assert.rejects(promise, cancel ? /cancelled/ : /not confirmed/);
+    assert.equal(c.pending, false); assert.equal(f.calls.length, 1);
+    assert.equal(c.lastAction?.phase, cancel ? 'cancelled' : 'failed');
+    assert.equal(c.lastAction.serviceMs, undefined);
+  }
+});
+test('service rejection before confirmation fails once and reports timing, including synchronous throws', async () => {
+  for (const synchronous of [false, true]) {
+    const f = fixture(), c = new Commander(1000);
+    f.ha.services = { xiaomi_miot: { get_properties: {} } };
+    f.ha.callService = () => {
+      f.calls.push('control');
+      if (synchronous) throw new Error('Denied');
+      return Promise.reject(new Error('Denied'));
+    };
+    await assert.rejects(c.start(() => ({ ...f, config })), /Denied/);
+    assert.equal(c.pending, false); assert.deepEqual(f.calls, ['control']);
+    assert.equal(c.lastAction?.serviceFailed, true); assert.equal(c.lastAction.phase, 'failed');
+    assert.equal(typeof c.lastAction.serviceMs, 'number'); assert.equal(c.lastAction.confirmedMs, undefined);
+  }
+});
 test('bounded second direct read is not blocked by a pending coordinator acknowledgement', async () => {
   const f = fixture(), c = new Commander(3000); f.ha.states[f.ids.air_fryer].state = 'Cooking';
   f.ha.services = { xiaomi_miot: { get_properties: {} } }; let reads = 0;
@@ -296,6 +371,7 @@ test('refresh permission failure falls back to reported state without failing or
   };
   await c.start(() => ({ ...f, config }));
   assert.deepEqual(f.calls, ['press', 'get_properties']);
+  assert.equal(c.lastAction?.refreshFailed, true); assert.equal(c.lastAction.phase, 'confirmed');
 });
 test('cancellation stops the read burst even if an outstanding refresh cannot be cancelled', async () => {
   const f = fixture(), c = new Commander(2000); f.ha.services = { xiaomi_miot: { get_properties: {} } };
@@ -371,6 +447,19 @@ test('sanitized export excludes IDs, names, raw values and arbitrary attributes'
   const value = JSON.stringify(snapshot(discover(f.ha, f.inventory, config)));
   for (const secret of ['private-secret', f.ids.target_temperature, 'Kitchen Air Fryer', 'synthetic-air_fryer', 'friendly_name']) assert.equal(value.includes(secret), false);
   assert.equal(JSON.parse(value).entities.length, 20);
+});
+test('timing export includes only command metadata and never service errors or payloads', () => {
+  const f = fixture(), timing = {
+    role: 'pause' as const, phase: 'confirmed' as const, serviceMs: 20000, confirmedMs: 401,
+    firstRefreshMs: 301, refreshes: 1, refreshFailed: false, serviceFailed: false,
+    error: 'private-error', data: { entity_id: 'private-entity' },
+  };
+  const value = JSON.stringify(snapshot(discover(f.ha, f.inventory, config), timing));
+  assert.equal(value.includes('private-'), false);
+  assert.deepEqual(JSON.parse(value).last_action, {
+    role: 'pause', phase: 'confirmed', service_ms: 20000, confirmed_ms: 401,
+    first_refresh_ms: 301, refreshes: 1, refresh_failed: false, service_failed: false,
+  });
 });
 test('display registry decoder retains integration, semantic key and hidden/category flags', () => {
   const [e] = decodeDisplay({ entity_categories: { 0: 'diagnostic' }, entities: [{ ei: 'button.x', di: 'd', pl: 'xiaomi_miot', tk: 'air_fryer-pause', hb: true, ec: 0 }] });

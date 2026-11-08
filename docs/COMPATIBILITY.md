@@ -61,7 +61,7 @@ indicator during a request. The redraw completes before the HA service call star
 independently of HA updates. Normal controls return only after confirmation or an
 explicit error/timeout; paused state restores Resume/Stop.
 
-## Post-command refresh (0.1.4)
+## Post-command refresh (0.1.5)
 
 For exact model `careli.fryer.maf10a`, selected-device Miot status sensor and advertised
 `xiaomi_miot.get_properties`, read `{siid: 2, piid: 1}` with `update_entity: true`.
@@ -70,11 +70,23 @@ Other models do not reuse this mapping. If registered, `homeassistant.update_ent
 can instead request a selected-status-entity refresh; otherwise use reported updates.
 
 The command-scoped burst has at most three attempts targeting 250/1250/3000 ms after
-control acknowledgement, never less than 1000 ms apart. At most two direct-read service
+control dispatch, never less than 1000 ms apart. At most two direct-read service
 acknowledgements can be pending; the coordinator fallback permits one. Observation
 continues independently because the Miot handler dispatches read data before its forced
 coordinator update finishes. Confirmation/cancellation ends further attempts; a failed
 refresh stops the burst and preserves ordinary state observation. No commands are retried.
+
+In 0.1.4 the burst began only after the control service acknowledged. In 0.1.5 both
+observation and read requests begin alongside that control call. A reported target state
+confirms the action without waiting for its service response. Rejection before state
+confirmation fails the action; a late rejection is recorded without undoing an observed
+state or overwriting a newer action. Timeout/cancellation still end observation even
+if a service response remains pending.
+
+Discovery details and the sanitized export separate control-response time, target-state
+confirmation time, first read time and read count. They do not measure physical appliance
+execution. Pending UI distinguishes a dispatched command from an acknowledged one, while
+normal controls still require an actually reported target state.
 
 Source evidence, pinned to the investigated Miot revision:
 
@@ -84,6 +96,7 @@ Source evidence, pinned to the investigated Miot revision:
 - [HA update-entity behavior](https://www.home-assistant.io/actions/homeassistant.update_entity/)
 - [HA coordinator throttling caveat](https://www.home-assistant.io/common-tasks/general/#to-define-a-custom-polling-interval)
 
-Unit/browser tests simulate read-driven confirmation, including an unresolved refresh
-acknowledgement and an initially stale read. They are not a live latency benchmark.
+Unit/browser tests simulate read-driven confirmation, including unresolved control and
+refresh acknowledgements, changed-program Start, late errors, cancellation, an initially
+stale read, and the built release bundle. They are not a live latency benchmark.
 Actual 1–2 second confirmation depends on device/transport/cloud behavior and permissions.

@@ -90,22 +90,23 @@ Resume button explains how to inspect or override discovery.
 ## Updating and checking the loaded version
 
 After updating in HACS, fully reload the dashboard browser/app. The collapsed
-**Discovery details · v0.1.4** label reports the JavaScript actually loaded by the
+**Discovery details · v0.1.5** label reports the JavaScript actually loaded by the
 browser. HACS showing an installed version does not by itself establish that the
 open dashboard has reloaded it.
 
 If the label is absent or shows an older version, reload without cache and check for
 duplicate/old dashboard resources. For a manually registered resource, a versioned
-URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.4` can refresh the cached
+URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.5` can refresh the cached
 module. Reload the page after changing a resource; custom elements do not replace
 an already registered older class within the same page.
 
 ### Status update latency
 
-The card requests fresh status at roughly 0.25 seconds after a successful cycle command,
-then, if needed, at 1.25 and 3 seconds. It watches HA's reported state without waiting
-for the refresh request's later coordinator work. This targets faster confirmation
-without treating a successful service call as proof the fryer changed state.
+The card requests fresh status at roughly 0.25 seconds after dispatching a cycle command,
+then, if needed, at 1.25 and 3 seconds. Starting in 0.1.5, observation and reads run
+alongside the original control service call as well as refresh requests. A delayed HA
+service response no longer holds up status checks or a genuinely confirmed state.
+A successful service call alone does not establish that the fryer changed state.
 
 MAF10A direct refresh reads only the model's declared status property through Xiaomi
 Miot. It requires the installed integration to advertise `get_properties`. Other
@@ -113,6 +114,13 @@ models/backends can fall back to `homeassistant.update_entity`, which may still 
 throttled by their coordinator. Device processing, transport/cloud latency and service
 permissions still determine the actual response time; 1–2 seconds is a target, not
 a guarantee. **Discovery details → Post-command status refresh** shows the chosen path.
+
+After a cycle command, Discovery details also shows **HA service response**, **Reported
+state confirmed**, and **Status refresh attempts / first request**, measured in milliseconds
+from command dispatch. A response can remain Pending after the reported state confirms.
+These timings are included in the sanitized schema export without service payloads,
+entity identifiers or error messages. They measure the card's HA interaction, not the
+instant the physical appliance acts.
 
 MAF10A **Turn Pot** is a read-only shake reminder even if Miot exposes it as a select.
 **Turn Pot Config** is the separate writable reminder switch. No wake-up capability,

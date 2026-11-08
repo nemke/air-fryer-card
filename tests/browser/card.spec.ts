@@ -78,3 +78,21 @@ test('mobile dark and light layouts fit, and save review screenshots', async ({ 
   await page.locator('#theme').click();
   await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-light.png' });
 });
+test('production bundle registers and controls the fixture without external runtime files', async ({ page }) => {
+  await page.route('**/production-preview', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body></body></html>' }));
+  await page.goto('/production-preview');
+  const external: string[] = [];
+  page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:5173')) external.push(request.url()); });
+  await page.addScriptTag({ type: 'module', url: '/dist/air-fryer-card.js' });
+  await page.evaluate(async () => {
+    const { fixture } = await import('/demo/fixture.ts' as string);
+    const f = fixture(), card = document.createElement('air-fryer-card') as any;
+    card.setConfig({ type: 'custom:air-fryer-card' }); card.hass = f.ha;
+    document.body.append(card); (window as any).bundleFixture = f;
+  });
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('180');
+  expect(await page.evaluate(() => (window as any).bundleFixture.calls)).toEqual([]);
+  await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
+  expect(await page.evaluate(() => (window as any).bundleFixture.calls[0])).toEqual({ domain: 'button', service: 'press', data: { entity_id: 'button.renamed_16' } });
+  expect(external).toEqual([]);
+});

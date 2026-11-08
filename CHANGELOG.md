@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.2
+
+- Start, Pause, Resume and Stop now remain pending until the reported device state
+  confirms the action. Buttons immediately show Starting/Pausing/Resuming/Stopping
+  with a spinner, block duplicate submissions and explain the HA update delay.
+- Prefer a recognized current status over a copied numeric attribute, fixing the
+  case where `Paused` plus a stale raw `4` kept Pause visible instead of Resume.
+  Accept numeric-string raw status and the exact `resume` action key. Missing Resume
+  bindings are visible and explained rather than silently omitted.
+- Show distinct On and Off buttons in an always-visible Power section, with clear
+  unavailable/unsupported explanations. Physical power still requires a real HA entity.
+- Display the loaded bundle version beside Discovery details and include it in the
+  sanitized schema export so installed and browser-loaded versions can be distinguished.
+
 ## 0.1.1
 
 - Program dropdown changes stay local until **Start selected program** is pressed.

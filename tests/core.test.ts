@@ -172,6 +172,61 @@ test('raw property state enables normalization when visible state is localized',
   assert.equal(cycle(discover(f.ha, f.inventory, config)).phase, 'preheat');
   assert.equal(cycle(discover(f.ha, f.inventory, config)).paused, true);
 });
+test('recognized paused state wins over a stale copied cooking attribute', () => {
+  for (const state of ['Paused', 'pause', '2', '2.0', 'Cooking_Paused']) {
+    const f = fixture(); f.ha.states[f.ids.air_fryer].state = state;
+    f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = 4;
+    const d = discover(f.ha, f.inventory, config);
+    assert.equal(cycle(d).paused, true);
+    assert.equal(actionAllowed('resume', d), true); assert.equal(actionAllowed('pause', d), false);
+  }
+});
+test('recognized cooking state wins over a stale paused attribute; localized raw strings still work', () => {
+  const f = fixture(); f.ha.states[f.ids.air_fryer].state = 'Cooking';
+  f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = 2;
+  assert.equal(cycle(discover(f.ha, f.inventory, config)).paused, false);
+  f.ha.states[f.ids.air_fryer].state = 'Pauzirano';
+  f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = '2';
+  assert.equal(cycle(discover(f.ha, f.inventory, config)).paused, true);
+});
+test('plain resume semantic key is recognized on the selected device', () => {
+  const f = fixture(); f.inventory.entities[17].translation_key = 'air_fryer-resume';
+  assert.equal(discover(f.ha, f.inventory, config).bindings.resume?.entity.entity_id, f.ids.resume_cook);
+});
+test('ordinary Start remains locked after service acknowledgement until cooking is reported', async () => {
+  const f = fixture(), c = new Commander();
+  f.ha.callService = async (domain, service, data) => { f.calls.push({ domain, service, data }); };
+  const pending = c.start(() => ({ ...f, config }));
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(c.pending, true); assert.equal(f.calls.length, 1);
+  await assert.rejects(c.start(() => ({ ...f, config })), /pending/);
+  f.ha.states[f.ids.air_fryer].state = 'Cooking'; await pending;
+  assert.equal(c.pending, false); assert.equal(f.calls.length, 1);
+});
+test('Pause and Resume wait for state confirmation and tolerate stale attributes', async () => {
+  const f = fixture(), c = new Commander(); f.ha.states[f.ids.air_fryer].state = 'Cooking';
+  f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = 4;
+  f.ha.callService = async (domain, service, data) => { f.calls.push({ domain, service, data }); };
+  const pause = c.action(() => ({ ...f, config }), 'pause');
+  await new Promise(r => setTimeout(r, 10)); assert.equal(c.pending, true);
+  f.ha.states[f.ids.air_fryer].state = 'Paused'; await pause;
+  assert.equal(actionAllowed('resume', discover(f.ha, f.inventory, config)), true);
+  f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = 2;
+  const resume = c.action(() => ({ ...f, config }), 'resume');
+  await new Promise(r => setTimeout(r, 10)); assert.equal(c.pending, true);
+  f.ha.states[f.ids.air_fryer].state = 'Cooking'; await resume;
+  assert.equal(f.calls.length, 2); assert.equal(c.pending, false);
+});
+test('ordinary cycle action timeouts and cancellation unlock without retrying', async () => {
+  for (const cancel of [false, true]) {
+    const f = fixture(), c = new Commander(cancel ? 35000 : 1);
+    f.ha.callService = async () => { f.calls.push('start'); };
+    const promise = c.start(() => ({ ...f, config }));
+    if (cancel) { await new Promise(r => setTimeout(r, 10)); c.cancel(); }
+    await assert.rejects(promise, cancel ? /cancelled/ : /not confirmed/);
+    assert.equal(c.pending, false); assert.equal(f.calls.length, 1);
+  }
+});
 test('known MAF10A faults withhold Start and Resume', () => {
   const f = fixture(); f.ha.states[f.ids.fault].state = 'E1';
   assert.equal(actionAllowed('start', discover(f.ha, f.inventory, config)), false);

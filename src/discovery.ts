@@ -11,7 +11,7 @@ const aliases: Record<Role, string[]> = {
   duration: ['target_time', 'operating_time', 'cooking_duration', 'set_time'],
   mode: ['mode', 'cooking_mode', 'program'],
   start: ['start_cook', 'start_program'], pause: ['pause'],
-  resume: ['resume_cook', 'resume_cooking'], stop: ['cancel_cooking', 'stop_program'],
+  resume: ['resume_cook', 'resume_cooking', 'resume'], stop: ['cancel_cooking', 'stop_program'],
   preheat: ['preheat'], auto_keep_warm: ['auto_keep_warm'], current_keep_warm: ['current_keep_warm'],
   weight: ['cooking_weight'], reservation: ['reservation_left_time', 'appoint_time', 'appoint_time_left'],
   measure: ['target_cooking_measure', 'food_quanty'], texture: ['texture'],

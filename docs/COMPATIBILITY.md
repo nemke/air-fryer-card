@@ -42,3 +42,16 @@ explanation. The card does not add a manufacturer API, a smart plug or a status 
 There is no queued recipe/start transaction. A successful action call is a request,
 not proof of a device state change. No automatic retries, scheduled cooking, recipe
 upload, cloud credentials or manufacturer API calls.
+
+As of 0.1.2, ordinary cycle commands as well as changed-program Start keep the card
+locked until their expected state is observed, with explicit progress on the clicked
+button. Pause requires a reported paused state; Resume/Start require an active,
+unpaused phase; Stop requires idle/off/completion. The 35-second observation window
+is cancellable on disconnect and does not retry. A recognized status string/number
+takes precedence over its copied raw numeric attribute; a localized unrecognized
+state can still use the raw attribute as fallback. These conflict/delay cases are
+covered by synthetic regression tests, not new live appliance tests.
+
+On/Off controls are always visible. They remain disabled without a genuine available
+power switch and do not stand in for Start/Stop. Discovery details includes the loaded
+bundle version, current status and copied raw attribute for targeted troubleshooting.

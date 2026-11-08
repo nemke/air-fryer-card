@@ -56,6 +56,9 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
   fryers start cooking on a mode write; a changed program is therefore sent once
   without an additional Start command. Discard a selection without sending anything.
 - Offers contextual Start, Pause, Resume and confirmed Stop for recognized MAF10A states.
+- Shows Starting/Pausing/Resuming/Stopping immediately and blocks repeat submissions
+  until HA reports the expected state. The card does not label cooking as paused
+  merely because the service accepted a Pause request.
 - Shows power on/off on the main card when a genuine power switch is discovered,
   including Miot `on`/`switch` semantics. A reachable power switch works even when
   cooking sensors are offline. Otherwise the card explains that physical power is
@@ -73,6 +76,23 @@ never sent by the dropdown itself. Starting a changed program waits for a cookin
 phase to be reported; if that times out, check the appliance before trying again.
 No fallback Start is sent. Selecting the already-current program uses the normal
 Start button. A successful action call is a request, not proof the device changed state.
+
+If Pause is confirmed, Resume replaces Pause. A recognized current status wins over
+a stale copied raw status attribute. If no Resume entity can be bound, a disabled
+Resume button explains how to inspect or override discovery.
+
+## Updating and checking the loaded version
+
+After updating in HACS, fully reload the dashboard browser/app. The collapsed
+**Discovery details · v0.1.2** label reports the JavaScript actually loaded by the
+browser. HACS showing an installed version does not by itself establish that the
+open dashboard has reloaded it.
+
+If the label is absent or shows an older version, reload without cache and check for
+duplicate/old dashboard resources. For a manually registered resource, a versioned
+URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.2` can refresh the cached
+module. Reload the page after changing a resource; custom elements do not replace
+an already registered older class within the same page.
 
 MAF10A **Turn Pot** is a read-only shake reminder even if Miot exposes it as a select.
 **Turn Pot Config** is the separate writable reminder switch. No wake-up capability,

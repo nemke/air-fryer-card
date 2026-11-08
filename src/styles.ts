@@ -43,10 +43,18 @@ export const styles = css`
   input[type=checkbox]:checked { background: var(--primary-color, #b5cda0); }
   input[type=checkbox]:checked::after { transform: translateX(15px); background: #26341e; }
   .actions { display: flex; gap: 8px; margin-top: 16px; }
-  .power-row { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
-  .power-row button { flex-shrink: 0; }
-  .power-row small { font-size: 11px; line-height: 1.5; }
+  .power-section { border: 1px solid var(--divider-color, #ffffff20); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; }
+  .power-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .power-buttons { display: flex; gap: 6px; }
+  .power-buttons button { min-width: 58px; }
+  .power-buttons button:disabled { opacity: .7; }
+  .power-buttons button[aria-pressed=true] { border-color: var(--primary-color, #c4d6ad); color: var(--primary-color, #c4d6ad); opacity: 1; }
+  .power-section .notice { font-size: 11px; margin-bottom: 0; }
   .actions button { flex: 1; }
+  .actions button[aria-busy=true] { opacity: 1; }
+  .spinner { display: inline-block; width: 13px; height: 13px; margin-right: 7px; vertical-align: -2px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pending-notice { background: var(--secondary-background-color, #ffffff08); border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.5; }
   .error { padding: 11px 13px; border-radius: 10px; background: color-mix(in srgb, var(--error-color, #d77364) 13%, transparent); color: var(--error-color, #ffb3a5); font-size: 13px; line-height: 1.5; }
   .notice { font-size: 12px; line-height: 1.5; margin-top: 12px; }
   details { border-top: 1px solid var(--divider-color, #ffffff12); margin-top: 18px; padding-top: 15px; }
@@ -60,5 +68,5 @@ export const styles = css`
   .editor-field { margin-bottom: 16px; }
   .editor-field > label { display: block; margin-bottom: 6px; font-size: 13px; }
   @media (max-width: 340px) { .body { padding: 16px; } .illustration { width: 88px; } .badge { font-size: 10px; } }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 `;

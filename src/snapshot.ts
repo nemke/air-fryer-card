@@ -1,11 +1,12 @@
 import type { Discovery } from './types';
+import { VERSION } from './version';
 // Explicit allowlist: never serialize hass, device identifiers, arbitrary attributes,
 // unique IDs, options, names or errors into a public diagnostic fixture.
 export function snapshot(d: Discovery) {
   const all = [...Object.values(d.bindings), ...d.extras, ...d.diagnostics];
   const seen = new Set<string>();
   return {
-    schema: 1, source: 'selected-device card snapshot', adapter: d.adapter,
+    schema: 1, card_version: VERSION, source: 'selected-device card snapshot', adapter: d.adapter,
     model: d.device?.model === 'careli.fryer.maf10a' ? 'careli.fryer.maf10a' : 'other',
     entities: all.filter(b => { if (seen.has(b.entity.entity_id)) return false; seen.add(b.entity.entity_id); return true; }).map((b, index) => {
       const a = b.state?.attributes || {};

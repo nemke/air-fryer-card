@@ -72,8 +72,9 @@ export class Commander {
   }
   async action(getEnvironment: () => Environment, role: Role): Promise<void> {
     await this.lock(async () => {
-      const e = getEnvironment(), c = actionCommand(role, discover(e.ha, e.inventory, e.config));
+      const e = getEnvironment(), d = discover(e.ha, e.inventory, e.config), c = actionCommand(role, d);
       await e.ha.callService(c.domain, c.service, c.data);
+      await this.observeAction(getEnvironment, role, d.device!.id);
     });
   }
   async start(getEnvironment: () => Environment, program?: ProgramDraft): Promise<void> {
@@ -90,18 +91,23 @@ export class Commander {
           // The MAF10A user reports selecting a mode starts cooking. Treat program
           // writes as potentially starting: never follow one with button.press,
           // including delayed status, failed service and observation timeout paths.
-          await this.observe(() => {
-            const fresh = getEnvironment();
-            const current = discover(fresh.ha, fresh.inventory, fresh.config);
-            if (current.device?.id !== program.device_id) throw new Error('The selected device has changed. Check the appliance state.');
-            const s = cycle(current);
-            return ['cooking', 'preheat', 'warm', 'delay'].includes(s.phase) && !s.completed;
-          }, 'Program sent, but cooking has not been confirmed. Check the appliance before starting again.');
+          await this.observeAction(getEnvironment, 'start', program.device_id);
           return;
         }
       }
       await e.ha.callService(normalStart.domain, normalStart.service, normalStart.data);
+      await this.observeAction(getEnvironment, 'start', d.device!.id);
     });
+  }
+  private async observeAction(getEnvironment: () => Environment, role: Role, deviceId: string): Promise<void> {
+    await this.observe(() => {
+      const fresh = getEnvironment(), current = discover(fresh.ha, fresh.inventory, fresh.config);
+      if (current.device?.id !== deviceId) throw new Error('The selected device has changed. Check the appliance state.');
+      const s = cycle(current);
+      if (role === 'pause') return s.paused;
+      if (role === 'stop') return s.phase === 'idle' || s.phase === 'off' || s.completed;
+      return ['cooking', 'preheat', 'warm', 'delay'].includes(s.phase) && !s.paused && !s.completed;
+    }, 'The device has not confirmed this action. Check its state before trying again.');
   }
   private async observe(confirmed: () => boolean, timeoutMessage: string): Promise<void> {
     const deadline = Date.now() + this.observationTimeoutMs;

@@ -12,16 +12,24 @@ const states: Record<number, [Cycle['phase'], boolean, boolean, boolean]> = {
 const descriptions = ['off', 'idle', 'paused', 'delay', 'cooking', 'preheat', 'cooking completed',
   'preheat completed', 'preheat paused', 'turn pot paused', 'keep warm', 'keep warm paused',
   'keep warm completed', 'crispy roast', 'degrease'];
+function stateCode(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isInteger(value) && states[value] ? value : undefined;
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const normalized = value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (/^\d+(?:\.0+)?$/.test(normalized)) return stateCode(Number(normalized));
+  if (normalized === 'pause' || normalized === 'cooking paused') return 2;
+  const code = descriptions.indexOf(normalized);
+  return code < 0 ? undefined : code;
+}
 export function cycle(discovery: Discovery): Cycle {
   const b = discovery.bindings.status;
   if (!discovery.online || (b && !b.available)) return { phase: 'unavailable', paused: false, completed: false, reminder: false };
   const raw = b?.state?.state;
   let code: number | undefined;
   if (discovery.adapter === 'xiaomi_miot' && discovery.device?.model === 'careli.fryer.maf10a') {
-    const attribute = b?.state?.attributes['air_fryer.status'];
-    if (typeof attribute === 'number') code = attribute;
-    else if (raw && /^\d+$/.test(raw)) code = Number(raw);
-    else { const i = descriptions.indexOf(raw?.trim().toLowerCase().replaceAll('_', ' ') || ''); if (i >= 0) code = i; }
+    // The primary state can update before its copied raw attribute. Prefer a
+    // recognized current state; use the numeric attribute for localized states.
+    code = stateCode(raw) ?? stateCode(b?.state?.attributes['air_fryer.status']);
   }
   if (code !== undefined && states[code]) {
     const [phase, paused, completed, reminder] = states[code];

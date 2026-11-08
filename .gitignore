@@ -1,0 +1,8 @@
+node_modules/
+demo-dist/
+test-results/
+playwright-report/
+*.log
+docs/HA_MCP_ACCESS.md
+research/observations/
+.env*

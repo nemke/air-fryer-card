@@ -1,0 +1,539 @@
+{
+  "type": "urn:miot-spec-v2:device:air-fryer:0000A0A4:careli-maf10a:1",
+  "description": "Air Fryer",
+  "services": [
+    {
+      "iid": 1,
+      "type": "urn:miot-spec-v2:service:device-information:00007801:careli-maf10a:1",
+      "description": "Device Information",
+      "properties": [
+        {
+          "iid": 1,
+          "type": "urn:miot-spec-v2:property:manufacturer:00000001:careli-maf10a:1",
+          "description": "Device Manufacturer",
+          "format": "string",
+          "access": [
+            "read"
+          ]
+        },
+        {
+          "iid": 2,
+          "type": "urn:miot-spec-v2:property:model:00000002:careli-maf10a:1",
+          "description": "Device Model",
+          "format": "string",
+          "access": [
+            "read"
+          ]
+        },
+        {
+          "iid": 3,
+          "type": "urn:miot-spec-v2:property:serial-number:00000003:careli-maf10a:1",
+          "description": "Device Serial Number",
+          "format": "string",
+          "access": [
+            "read"
+          ]
+        },
+        {
+          "iid": 4,
+          "type": "urn:miot-spec-v2:property:firmware-revision:00000005:careli-maf10a:1",
+          "description": "Current Firmware Version",
+          "format": "string",
+          "access": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "iid": 2,
+      "type": "urn:miot-spec-v2:service:air-fryer:00007897:careli-maf10a:1",
+      "description": "Air Fryer",
+      "properties": [
+        {
+          "iid": 1,
+          "type": "urn:miot-spec-v2:property:status:00000007:careli-maf10a:1",
+          "description": "Status",
+          "format": "uint8",
+          "access": [
+            "read",
+            "notify"
+          ],
+          "value-list": [
+            {
+              "value": 0,
+              "description": "Off"
+            },
+            {
+              "value": 1,
+              "description": "Idle"
+            },
+            {
+              "value": 2,
+              "description": "Paused"
+            },
+            {
+              "value": 3,
+              "description": "Delay"
+            },
+            {
+              "value": 4,
+              "description": "Cooking"
+            },
+            {
+              "value": 5,
+              "description": "Preheat "
+            },
+            {
+              "value": 6,
+              "description": "Cooking Completed"
+            },
+            {
+              "value": 7,
+              "description": "Preheat Completed"
+            },
+            {
+              "value": 8,
+              "description": "Preheat Paused"
+            },
+            {
+              "value": 9,
+              "description": "Turn Pot Paused"
+            },
+            {
+              "value": 10,
+              "description": "Keep Warm"
+            },
+            {
+              "value": 11,
+              "description": "Keep Warm Paused"
+            },
+            {
+              "value": 12,
+              "description": "Keep Warm Completed"
+            },
+            {
+              "value": 13,
+              "description": "Crispy Roast"
+            },
+            {
+              "value": 14,
+              "description": "Degrease"
+            }
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 2,
+          "type": "urn:miot-spec-v2:property:fault:00000009:careli-maf10a:1",
+          "description": "Device Fault",
+          "format": "uint8",
+          "access": [
+            "read",
+            "notify"
+          ],
+          "value-list": [
+            {
+              "value": 0,
+              "description": "No Faults"
+            },
+            {
+              "value": 1,
+              "description": "E1"
+            },
+            {
+              "value": 2,
+              "description": "E2"
+            },
+            {
+              "value": 3,
+              "description": "E3"
+            }
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 3,
+          "type": "urn:miot-spec-v2:property:target-time:00000078:careli-maf10a:1",
+          "description": "Target Time",
+          "format": "uint16",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "unit": "minutes",
+          "value-range": [
+            1,
+            1440,
+            1
+          ]
+        },
+        {
+          "iid": 4,
+          "type": "urn:miot-spec-v2:property:target-temperature:00000021:careli-maf10a:1",
+          "description": "Target Temperature",
+          "format": "uint8",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "unit": "celsius",
+          "value-range": [
+            40,
+            230,
+            5
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 5,
+          "type": "urn:miot-spec-v2:property:left-time:0000003C:careli-maf10a:1",
+          "description": "Left Time",
+          "format": "uint16",
+          "access": [
+            "read",
+            "notify"
+          ],
+          "unit": "minutes",
+          "value-range": [
+            0,
+            1440,
+            1
+          ]
+        },
+        {
+          "iid": 6,
+          "type": "urn:miot-spec-v2:property:auto-keep-warm:0000002B:careli-maf10a:1",
+          "description": "Auto Keep Warm",
+          "format": "bool",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 7,
+          "type": "urn:miot-spec-v2:property:current-keep-warm:00000215:careli-maf10a:1",
+          "description": "Current Keep Warm",
+          "format": "bool",
+          "access": [
+            "read",
+            "notify",
+            "write"
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 8,
+          "type": "urn:miot-spec-v2:property:mode:00000008:careli-maf10a:1",
+          "description": "Mode",
+          "format": "uint8",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "value-list": [
+            {
+              "value": 1,
+              "description": "French Fries"
+            },
+            {
+              "value": 2,
+              "description": "Chicken Wing"
+            },
+            {
+              "value": 3,
+              "description": "Steak "
+            },
+            {
+              "value": 4,
+              "description": "Lamb Chops"
+            },
+            {
+              "value": 5,
+              "description": "Fish"
+            },
+            {
+              "value": 6,
+              "description": "Shrimp"
+            },
+            {
+              "value": 7,
+              "description": "Vegetables "
+            },
+            {
+              "value": 8,
+              "description": "Cake"
+            },
+            {
+              "value": 9,
+              "description": "Pizza"
+            },
+            {
+              "value": 10,
+              "description": "Defrost"
+            },
+            {
+              "value": 11,
+              "description": "Dried Fruit"
+            },
+            {
+              "value": 12,
+              "description": "Yogurt"
+            },
+            {
+              "value": 0,
+              "description": "Manual"
+            }
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 9,
+          "type": "urn:miot-spec-v2:property:preheat:00000103:careli-maf10a:1",
+          "description": "Preheat",
+          "format": "bool",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ]
+        },
+        {
+          "iid": 10,
+          "type": "urn:miot-spec-v2:property:recipe-id:0000020F:careli-maf10a:1",
+          "description": "Recipe Id",
+          "format": "string",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ]
+        },
+        {
+          "iid": 11,
+          "type": "urn:miot-spec-v2:property:recipe-name:00000210:careli-maf10a:1",
+          "description": "Recipe Name",
+          "format": "string",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ]
+        },
+        {
+          "iid": 12,
+          "type": "urn:miot-spec-v2:property:recipe-sync:00000212:careli-maf10a:1",
+          "description": "Recipe Sync",
+          "format": "string",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ]
+        },
+        {
+          "iid": 13,
+          "type": "urn:miot-spec-v2:property:target-cooking-measure:00000104:careli-maf10a:1",
+          "description": "Target Cooking Measure",
+          "format": "uint8",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "unit": "percentage",
+          "value-list": [
+            {
+              "value": 0,
+              "description": "NULL"
+            },
+            {
+              "value": 1,
+              "description": "One Layer"
+            },
+            {
+              "value": 2,
+              "description": "Double Layer"
+            },
+            {
+              "value": 3,
+              "description": "Half Pot"
+            },
+            {
+              "value": 4,
+              "description": "Full Pot"
+            }
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 14,
+          "type": "urn:miot-spec-v2:property:turn-pot:00000211:careli-maf10a:1",
+          "description": "Turn Pot",
+          "format": "uint8",
+          "access": [
+            "read",
+            "notify"
+          ],
+          "value-list": [
+            {
+              "value": 1,
+              "description": "No Need Turn Over Pot"
+            },
+            {
+              "value": 2,
+              "description": "Need Turn Over Pot"
+            }
+          ]
+        },
+        {
+          "iid": 15,
+          "type": "urn:miot-spec-v2:property:turn-pot-config:00000213:careli-maf10a:1",
+          "description": "Turn Pot Config",
+          "format": "bool",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ]
+        },
+        {
+          "iid": 16,
+          "type": "urn:miot-spec-v2:property:texture:00000214:careli-maf10a:1",
+          "description": "Texture",
+          "format": "uint8",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "value-list": [
+            {
+              "value": 0,
+              "description": "NONE"
+            },
+            {
+              "value": 1,
+              "description": "Crispy Roast"
+            },
+            {
+              "value": 2,
+              "description": "Tender Roast"
+            },
+            {
+              "value": 3,
+              "description": "Degrease"
+            }
+          ],
+          "gatt-access": []
+        },
+        {
+          "iid": 17,
+          "type": "urn:miot-spec-v2:property:reservation-left-time:0000016E:careli-maf10a:1",
+          "description": "Reservation Left Time",
+          "format": "uint16",
+          "access": [
+            "read",
+            "notify",
+            "write"
+          ],
+          "unit": "minutes",
+          "value-range": [
+            0,
+            2880,
+            1
+          ]
+        },
+        {
+          "iid": 18,
+          "type": "urn:miot-spec-v2:property:cooking-weight:00000287:careli-maf10a:1",
+          "description": "Cooking Weight",
+          "format": "uint16",
+          "access": [
+            "read",
+            "write",
+            "notify"
+          ],
+          "value-range": [
+            100,
+            1800,
+            1
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "iid": 1,
+          "type": "urn:miot-spec-v2:action:start-cook:00002806:careli-maf10a:1",
+          "description": "Start Cook",
+          "in": [],
+          "out": []
+        },
+        {
+          "iid": 2,
+          "type": "urn:miot-spec-v2:action:cancel-cooking:00002807:careli-maf10a:1",
+          "description": "Cancel Cooking",
+          "in": [],
+          "out": []
+        },
+        {
+          "iid": 3,
+          "type": "urn:miot-spec-v2:action:pause:0000280C:careli-maf10a:1",
+          "description": "Pause",
+          "in": [],
+          "out": []
+        },
+        {
+          "iid": 4,
+          "type": "urn:miot-spec-v2:action:resume-cook:00002893:careli-maf10a:1",
+          "description": "Resume Cook",
+          "in": [],
+          "out": []
+        },
+        {
+          "iid": 5,
+          "type": "urn:miot-spec-v2:action:start-recipe-cook:00002844:careli-maf10a:1",
+          "description": "Start Recipe Cook",
+          "in": [
+            3,
+            4,
+            7,
+            10,
+            11,
+            13,
+            16,
+            17,
+            18
+          ],
+          "out": []
+        }
+      ],
+      "events": [
+        {
+          "iid": 1,
+          "type": "urn:miot-spec-v2:event:cooking-finished:0000501C:careli-maf10a:1",
+          "description": "Cooking Finished",
+          "arguments": []
+        },
+        {
+          "iid": 2,
+          "type": "urn:miot-spec-v2:event:cooking-start:0000505A:careli-maf10a:1",
+          "description": "Cooking Start",
+          "arguments": []
+        },
+        {
+          "iid": 3,
+          "type": "urn:miot-spec-v2:event:keep-warm-finished:0000505F:careli-maf10a:1",
+          "description": "Keep Warm Finished",
+          "arguments": []
+        }
+      ]
+    }
+  ]
+}

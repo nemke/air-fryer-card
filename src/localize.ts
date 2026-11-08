@@ -1,0 +1,49 @@
+import type { HA } from './types';
+const en = {
+  remaining: 'Time remaining', temperature: 'Temperature', duration: 'Cooking time',
+  mode: 'Program', start: 'Start cooking', pause: 'Pause', resume: 'Resume', stop: 'Stop',
+  preheat: 'Preheat', auto_keep_warm: 'Auto keep warm', current_keep_warm: 'Keep warm this cycle',
+  weight: 'Cooking weight', reservation: 'Reservation time', measure: 'Food quantity',
+  texture: 'Texture', reminder: 'Shake reminder', reminder_config: 'Shake reminder enabled',
+  power: 'Power', current_temperature: 'Current temperature', fault: 'Error',
+  more: 'More settings', diagnostics: 'Discovery details', apply: 'Apply',
+  unavailable: 'Live data unavailable', offline_hint: 'The fryer may be switched off. Controls return when it reconnects.',
+  idle: 'Ready to cook', off: 'Off', cooking: 'Cooking', preheat_phase: 'Preheating',
+  warm: 'Keeping warm', delay: 'Scheduled', unknown: 'State not recognized',
+  paused: 'Paused', completed: 'Completed', shake: 'Time to turn your food',
+  waiting: 'Waiting for device confirmation…', requested: 'Command sent. Waiting for the device state to update.',
+  choose: 'Choose an air fryer in the card editor.', none: 'No air fryer discovered yet.',
+  loading: 'Loading device information…', device: 'Air fryer', automatic: 'Automatic — only when exactly one fryer is found',
+  title: 'Card title', hidden: 'Include hidden entities', overrides: 'Optional capability overrides',
+  automatic_binding: 'Automatic discovery', no_override: 'Automatic / no override',
+  confirm_stop: 'Stop the current program?', cancel: 'Cancel', confirm: 'Stop program',
+  readonly: 'Read-only', missing_schema: 'Waiting for control limits', no_options: 'No options available',
+  discovery_warning: 'Some capabilities need attention. Open discovery details.', export: 'Download sanitized snapshot',
+  diagnostics_note: 'Snapshot contains selected-device capability metadata only. Identifiers and names are replaced.',
+};
+type Key = keyof typeof en;
+const sr: Partial<Record<Key, string>> = {
+  remaining: 'Preostalo vreme', temperature: 'Temperatura', duration: 'Vreme pripreme', mode: 'Program',
+  start: 'Pokreni pripremu', pause: 'Pauziraj', resume: 'Nastavi', stop: 'Zaustavi',
+  preheat: 'Predgrevanje', auto_keep_warm: 'Automatsko održavanje toplote',
+  current_keep_warm: 'Održavanje toplote za ovaj ciklus', weight: 'Težina namirnica', reservation: 'Vreme rezervacije',
+  measure: 'Količina hrane', texture: 'Tekstura', reminder: 'Podsetnik za okretanje',
+  reminder_config: 'Podsetnik za okretanje uključen', power: 'Napajanje', current_temperature: 'Trenutna temperatura',
+  fault: 'Greška', more: 'Dodatna podešavanja', diagnostics: 'Detalji otkrivanja', apply: 'Primeni',
+  unavailable: 'Podaci trenutno nisu dostupni', offline_hint: 'Uređaj je možda isključen. Kontrole se vraćaju kada se poveže.',
+  idle: 'Spremno za pripremu', off: 'Isključeno', cooking: 'Priprema', preheat_phase: 'Predgrevanje',
+  warm: 'Održavanje toplote', delay: 'Zakazano', unknown: 'Nepoznato stanje', paused: 'Pauzirano',
+  completed: 'Završeno', shake: 'Vreme je da okrenete hranu', waiting: 'Čekanje potvrde uređaja…',
+  requested: 'Komanda je poslata. Čekanje novog stanja uređaja.',
+  choose: 'Izaberite air fryer u editoru kartice.', none: 'Air fryer još nije pronađen.', loading: 'Učitavanje podataka uređaja…',
+  device: 'Air fryer', automatic: 'Automatski — kada postoji tačno jedan uređaj', title: 'Naslov kartice',
+  hidden: 'Prikaži skrivene entitete', overrides: 'Opcione izmene povezivanja',
+  automatic_binding: 'Automatsko otkrivanje', no_override: 'Automatski / bez izmene',
+  confirm_stop: 'Zaustaviti trenutni program?', cancel: 'Otkaži', confirm: 'Zaustavi program', readonly: 'Samo čitanje',
+  missing_schema: 'Čekanje ograničenja kontrole', no_options: 'Nema dostupnih opcija',
+  discovery_warning: 'Neke mogućnosti zahtevaju proveru. Otvorite detalje otkrivanja.',
+  export: 'Preuzmi anonimizovani snimak', diagnostics_note: 'Snimak sadrži samo metapodatke mogućnosti izabranog uređaja. Identifikatori i nazivi su zamenjeni.',
+};
+export function t(ha: HA | undefined, key: Key): string {
+  return (ha?.locale?.language || ha?.language || '').startsWith('sr') ? sr[key] || en[key] : en[key];
+}

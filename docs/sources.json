@@ -1,0 +1,210 @@
+{
+  "researched_at": "2026-11-08",
+  "scope": "Source investigation and plan; not hardware testing or a security certification.",
+  "repositories": [
+    {
+      "repository": "al-one/hass-xiaomi-miot",
+      "commit": "d6e6dfc8d2de409972a7683c93bbf3fa0119370c",
+      "files": [
+        {
+          "path": "custom_components/xiaomi_miot/core/hass_entity.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/hass_entity.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/core/converters.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/converters.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/core/device_customizes.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/device_customizes.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/core/miot_spec.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/miot_spec.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/button.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/button.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/number.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/number.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/select.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/select.py"
+        }
+      ]
+    },
+    {
+      "repository": "XiaoMi/ha_xiaomi_home",
+      "commit": "75b3acb6325a3a8d295688b13904737d6738a6a5",
+      "files": [
+        {
+          "path": "custom_components/xiaomi_home/miot/miot_device.py",
+          "url": "https://github.com/XiaoMi/ha_xiaomi_home/blob/75b3acb6325a3a8d295688b13904737d6738a6a5/custom_components/xiaomi_home/miot/miot_device.py"
+        },
+        {
+          "path": "custom_components/xiaomi_home/number.py",
+          "url": "https://github.com/XiaoMi/ha_xiaomi_home/blob/75b3acb6325a3a8d295688b13904737d6738a6a5/custom_components/xiaomi_home/number.py"
+        },
+        {
+          "path": "custom_components/xiaomi_home/button.py",
+          "url": "https://github.com/XiaoMi/ha_xiaomi_home/blob/75b3acb6325a3a8d295688b13904737d6738a6a5/custom_components/xiaomi_home/button.py"
+        },
+        {
+          "path": "custom_components/xiaomi_home/sensor.py",
+          "url": "https://github.com/XiaoMi/ha_xiaomi_home/blob/75b3acb6325a3a8d295688b13904737d6738a6a5/custom_components/xiaomi_home/sensor.py"
+        },
+        {
+          "path": "LICENSE.md",
+          "url": "https://github.com/XiaoMi/ha_xiaomi_home/blob/75b3acb6325a3a8d295688b13904737d6738a6a5/LICENSE.md"
+        }
+      ]
+    },
+    {
+      "repository": "ADNPolymerase/ha-appliance-card",
+      "commit": "919367fdfd5d7ab31c7f4c35fa82ac3c12a38de7",
+      "files": [
+        {
+          "path": "src/06-detection.js",
+          "url": "https://github.com/ADNPolymerase/ha-appliance-card/blob/919367fdfd5d7ab31c7f4c35fa82ac3c12a38de7/src/06-detection.js"
+        },
+        {
+          "path": "LICENSE",
+          "url": "https://github.com/ADNPolymerase/ha-appliance-card/blob/919367fdfd5d7ab31c7f4c35fa82ac3c12a38de7/LICENSE"
+        }
+      ]
+    },
+    {
+      "repository": "juju35/ha-smart-appliance-card",
+      "commit": "f7f2b226d531f3ef1f115476c19cab4418852f45",
+      "files": [
+        {
+          "path": "src/smart-appliance-card.js",
+          "url": "https://github.com/juju35/ha-smart-appliance-card/blob/f7f2b226d531f3ef1f115476c19cab4418852f45/src/smart-appliance-card.js"
+        },
+        {
+          "path": "LICENSE",
+          "url": "https://github.com/juju35/ha-smart-appliance-card/blob/f7f2b226d531f3ef1f115476c19cab4418852f45/LICENSE"
+        }
+      ]
+    },
+    {
+      "repository": "tsunglung/XiaomiAirFryer",
+      "commit": "6a2be8b3fd388b7b5fd80c57683a728a87cac15d",
+      "files": [
+        {
+          "path": "custom_components/xiaomi_airfryer/switch.py",
+          "url": "https://github.com/tsunglung/XiaomiAirFryer/blob/6a2be8b3fd388b7b5fd80c57683a728a87cac15d/custom_components/xiaomi_airfryer/switch.py"
+        },
+        {
+          "path": "custom_components/xiaomi_airfryer/sensor.py",
+          "url": "https://github.com/tsunglung/XiaomiAirFryer/blob/6a2be8b3fd388b7b5fd80c57683a728a87cac15d/custom_components/xiaomi_airfryer/sensor.py"
+        },
+        {
+          "path": "custom_components/xiaomi_airfryer/const.py",
+          "url": "https://github.com/tsunglung/XiaomiAirFryer/blob/6a2be8b3fd388b7b5fd80c57683a728a87cac15d/custom_components/xiaomi_airfryer/const.py"
+        }
+      ]
+    },
+    {
+      "repository": "renaudallard/homeassistant_philips_homeid",
+      "commit": "5dcc04b4f701c2ef976e062f6b0cf9954def4e07",
+      "files": [
+        {
+          "path": "custom_components/philips_homeid/button.py",
+          "url": "https://github.com/renaudallard/homeassistant_philips_homeid/blob/5dcc04b4f701c2ef976e062f6b0cf9954def4e07/custom_components/philips_homeid/button.py"
+        },
+        {
+          "path": "custom_components/philips_homeid/number.py",
+          "url": "https://github.com/renaudallard/homeassistant_philips_homeid/blob/5dcc04b4f701c2ef976e062f6b0cf9954def4e07/custom_components/philips_homeid/number.py"
+        },
+        {
+          "path": "custom_components/philips_homeid/sensor.py",
+          "url": "https://github.com/renaudallard/homeassistant_philips_homeid/blob/5dcc04b4f701c2ef976e062f6b0cf9954def4e07/custom_components/philips_homeid/sensor.py"
+        },
+        {
+          "path": "custom_components/philips_homeid/sensor_descriptions.py",
+          "url": "https://github.com/renaudallard/homeassistant_philips_homeid/blob/5dcc04b4f701c2ef976e062f6b0cf9954def4e07/custom_components/philips_homeid/sensor_descriptions.py"
+        },
+        {
+          "path": "LICENSE",
+          "url": "https://github.com/renaudallard/homeassistant_philips_homeid/blob/5dcc04b4f701c2ef976e062f6b0cf9954def4e07/LICENSE"
+        }
+      ]
+    },
+    {
+      "repository": "Noack1978/ha-airfryer-card",
+      "commit": "3d9d8cf452a593fe392d34b5fd486385c1dc727e",
+      "files": [
+        {
+          "path": "ha-airfryer-card.js",
+          "url": "https://github.com/Noack1978/ha-airfryer-card/blob/3d9d8cf452a593fe392d34b5fd486385c1dc727e/ha-airfryer-card.js"
+        }
+      ]
+    },
+    {
+      "repository": "home-assistant/core",
+      "commit": "cfa38d0bda11cbadba0b44c3778353f69b17dbf8",
+      "files": [
+        {
+          "path": "homeassistant/components/config/entity_registry.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/config/entity_registry.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/sensor.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/sensor.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/number.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/number.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/button.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/button.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/select.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/select.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/switch.py",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/switch.py"
+        },
+        {
+          "path": "homeassistant/components/vesync/services.yaml",
+          "url": "https://github.com/home-assistant/core/blob/cfa38d0bda11cbadba0b44c3778353f69b17dbf8/homeassistant/components/vesync/services.yaml"
+        }
+      ]
+    },
+    {
+      "repository": "home-assistant/frontend",
+      "commit": "ac6928622e2fedc9f1e34d171517ec3547104195",
+      "files": [
+        {
+          "path": "src/data/entity/entity_registry.ts",
+          "url": "https://github.com/home-assistant/frontend/blob/ac6928622e2fedc9f1e34d171517ec3547104195/src/data/entity/entity_registry.ts"
+        }
+      ]
+    }
+  ],
+  "documentation": [
+    "https://contributors.home-assistant.io/frontend/reference/hass-object/",
+    "https://contributors.home-assistant.io/frontend/custom-ui/card/",
+    "https://www.home-assistant.io/integrations/vesync/#air-fryers",
+    "https://www.home-assistant.io/integrations/mcp_server/",
+    "https://developers.openai.com/api/docs/guides/custom-mcp-server"
+  ],
+  "specifications": [
+    {
+      "model": "careli.fryer.maf10a",
+      "urn": "urn:miot-spec-v2:device:air-fryer:0000A0A4:careli-maf10a:1",
+      "source": "https://miot-spec.org/miot-spec-v2/instance?type=urn%3Amiot-spec-v2%3Adevice%3Aair-fryer%3A0000A0A4%3Acareli-maf10a%3A1",
+      "retrieved_on": "2026-11-08",
+      "local_path": "research/miot/careli.fryer.maf10a.spec.json",
+      "sha256_of_saved_file": "fc59d224a52e4615df05978022318e8646f0aa12f74e7eccec47b2a2721419c7",
+      "scope": "Public model schema, not installed HA metadata or hardware validation"
+    }
+  ]
+}

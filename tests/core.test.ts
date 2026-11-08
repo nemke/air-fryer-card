@@ -6,6 +6,7 @@ import { actionAllowed, actionCommand, bounds, Commander, settingCommand } from 
 import { cycle, durationLabel, seconds } from '../src/cycle.ts';
 import { snapshot } from '../src/snapshot.ts';
 import { decodeDisplay, watchRegistry } from '../src/registry.ts';
+import { statusRefresh } from '../src/refresh.ts';
 import type { Config, HA } from '../src/types.ts';
 
 const config: Config = { type: 'custom:air-fryer-card' };
@@ -226,6 +227,92 @@ test('ordinary cycle action timeouts and cancellation unlock without retrying', 
     await assert.rejects(promise, cancel ? /cancelled/ : /not confirmed/);
     assert.equal(c.pending, false); assert.equal(f.calls.length, 1);
   }
+});
+test('MAF10A direct status refresh is a registered read of the exact selected-device property', () => {
+  const f = fixture(); f.ha.services = { xiaomi_miot: { get_properties: {} }, homeassistant: { update_entity: {} } };
+  const d = discover(f.ha, f.inventory, config);
+  assert.deepEqual(statusRefresh(f.ha, d), { domain: 'xiaomi_miot', service: 'get_properties', data: {
+    entity_id: [f.ids.air_fryer], mapping: [{ siid: 2, piid: 1 }], update_entity: true,
+  } });
+  assert.equal(f.calls.length, 0);
+  d.bindings.status!.entity.device_id = 'other'; assert.equal(statusRefresh(f.ha, d), undefined);
+});
+test('refresh requires advertised services and never reuses MAF10A property IDs on another model', () => {
+  const f = fixture();
+  assert.equal(statusRefresh(f.ha, discover(f.ha, f.inventory, config)), undefined);
+  f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  f.inventory.devices[0].model = 'careli.fryer.another';
+  assert.equal(statusRefresh(f.ha, discover(f.ha, f.inventory, config)), undefined);
+  f.ha.services.homeassistant = { update_entity: {} };
+  assert.deepEqual(statusRefresh(f.ha, discover(f.ha, f.inventory, config)), {
+    domain: 'homeassistant', service: 'update_entity', data: { entity_id: [f.ids.air_fryer] },
+  });
+});
+test('confirmed commands do not request unnecessary status reads', async () => {
+  const f = fixture(), c = new Commander(); f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  await c.start(() => ({ ...f, config })); assert.equal(f.calls.length, 1);
+});
+test('fresh status unlocks Pause before the refresh service acknowledgement finishes', async () => {
+  const f = fixture(), c = new Commander(3000); f.ha.states[f.ids.air_fryer].state = 'Cooking';
+  f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  let reads = 0;
+  f.ha.callService = async (domain, service, data) => {
+    f.calls.push({ domain, service, data });
+    if (service === 'get_properties') {
+      reads++; f.ha.states[f.ids.air_fryer].state = 'Paused';
+      await new Promise<void>(() => {}); // Coordinator follow-up is still pending.
+    }
+  };
+  await c.action(() => ({ ...f, config }), 'pause');
+  assert.equal(c.pending, false); assert.equal(reads, 1); assert.equal(f.calls.length, 2);
+});
+test('bounded second direct read is not blocked by a pending coordinator acknowledgement', async () => {
+  const f = fixture(), c = new Commander(3000); f.ha.states[f.ids.air_fryer].state = 'Cooking';
+  f.ha.services = { xiaomi_miot: { get_properties: {} } }; let reads = 0;
+  f.ha.callService = async (domain, service) => {
+    f.calls.push(service);
+    if (domain === 'xiaomi_miot') {
+      if (++reads === 2) f.ha.states[f.ids.air_fryer].state = 'Paused';
+      await new Promise<void>(() => {});
+    }
+  };
+  await c.action(() => ({ ...f, config }), 'pause');
+  assert.deepEqual(f.calls, ['press', 'get_properties', 'get_properties']); assert.equal(c.pending, false);
+});
+test('unconfirmed action performs at most three reads and never repeats the control command', async () => {
+  const f = fixture(), c = new Commander(3400); f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  f.ha.callService = async (domain, service) => { f.calls.push(service); };
+  await assert.rejects(c.start(() => ({ ...f, config })), /not confirmed/);
+  assert.deepEqual(f.calls, ['press', 'get_properties', 'get_properties', 'get_properties']);
+});
+test('refresh permission failure falls back to reported state without failing or retrying the action', async () => {
+  const f = fixture(), c = new Commander(2000); f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  f.ha.callService = async (domain, service) => {
+    f.calls.push(service);
+    if (domain === 'xiaomi_miot') {
+      setTimeout(() => { f.ha.states[f.ids.air_fryer].state = 'Cooking'; }, 50);
+      throw new Error('Unauthorized refresh');
+    }
+  };
+  await c.start(() => ({ ...f, config }));
+  assert.deepEqual(f.calls, ['press', 'get_properties']);
+});
+test('cancellation stops the read burst even if an outstanding refresh cannot be cancelled', async () => {
+  const f = fixture(), c = new Commander(2000); f.ha.services = { xiaomi_miot: { get_properties: {} } };
+  f.ha.callService = async (domain, service) => {
+    f.calls.push(service);
+    if (domain === 'xiaomi_miot') { c.cancel(); await new Promise<void>(() => {}); }
+  };
+  await assert.rejects(c.start(() => ({ ...f, config })), /cancelled/);
+  assert.deepEqual(f.calls, ['press', 'get_properties']); assert.equal(c.pending, false);
+});
+test('coordinator refresh fallback allows only one outstanding call', async () => {
+  const f = fixture(), c = new Commander(1500); f.ha.services = { homeassistant: { update_entity: {} } };
+  f.ha.callService = async (domain, service) => {
+    f.calls.push(service); if (domain === 'homeassistant') await new Promise<void>(() => {});
+  };
+  await assert.rejects(c.start(() => ({ ...f, config })), /not confirmed/);
+  assert.deepEqual(f.calls, ['press', 'update_entity']);
 });
 test('known MAF10A faults withhold Start and Resume', () => {
   const f = fixture(); f.ha.states[f.ids.fault].state = 'E1';

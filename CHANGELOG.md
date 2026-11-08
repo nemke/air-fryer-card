@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.4
+
+- Request fresh status after cycle commands instead of only waiting for a scheduled
+  integration poll. Registered Xiaomi Miot `get_properties` reads MAF10A's read-only
+  status property and publishes the result into HA, bypassing coordinator debounce.
+- If still unconfirmed, request at most three reads, targeting 0.25, 1.25 and 3 seconds
+  after command acknowledgement, with at least one second between attempts. Watch
+  state concurrently with refresh acknowledgements; two direct reads may be outstanding
+  because the handler can wait for a coordinator after publishing its read result.
+- Use registered `homeassistant.update_entity` as a conservative fallback, with one
+  pending call. Other models never inherit MAF10A property IDs. Refresh errors fall
+  back to ordinary reported state and never retry a control command.
+- Show the selected refresh provider in discovery details. No continuous/background
+  polling and no promise of a fixed hardware or cloud response time.
+
 ## 0.1.3
 
 - Replace the entire cycle-control row with one disabled progress indicator during

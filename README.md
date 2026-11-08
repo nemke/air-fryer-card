@@ -61,6 +61,10 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
   action row, so Pause/Stop disappear while pausing; Resume/Stop return on confirmation.
   The card does not label cooking as paused
   merely because the service accepted a Pause request.
+- Requests fresh status after cycle commands. Xiaomi Miot / MAF10A uses the registered
+  `get_properties` read service when available; otherwise a registered HA Update entity
+  service can request an early poll. Refresh attempts are bounded and never repeat
+  cooking commands or create continuous polling.
 - Shows power on/off on the main card when a genuine power switch is discovered,
   including Miot `on`/`switch` semantics. A reachable power switch works even when
   cooking sensors are offline. Otherwise the card explains that physical power is
@@ -86,15 +90,29 @@ Resume button explains how to inspect or override discovery.
 ## Updating and checking the loaded version
 
 After updating in HACS, fully reload the dashboard browser/app. The collapsed
-**Discovery details · v0.1.3** label reports the JavaScript actually loaded by the
+**Discovery details · v0.1.4** label reports the JavaScript actually loaded by the
 browser. HACS showing an installed version does not by itself establish that the
 open dashboard has reloaded it.
 
 If the label is absent or shows an older version, reload without cache and check for
 duplicate/old dashboard resources. For a manually registered resource, a versioned
-URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.3` can refresh the cached
+URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.4` can refresh the cached
 module. Reload the page after changing a resource; custom elements do not replace
 an already registered older class within the same page.
+
+### Status update latency
+
+The card requests fresh status at roughly 0.25 seconds after a successful cycle command,
+then, if needed, at 1.25 and 3 seconds. It watches HA's reported state without waiting
+for the refresh request's later coordinator work. This targets faster confirmation
+without treating a successful service call as proof the fryer changed state.
+
+MAF10A direct refresh reads only the model's declared status property through Xiaomi
+Miot. It requires the installed integration to advertise `get_properties`. Other
+models/backends can fall back to `homeassistant.update_entity`, which may still be
+throttled by their coordinator. Device processing, transport/cloud latency and service
+permissions still determine the actual response time; 1–2 seconds is a target, not
+a guarantee. **Discovery details → Post-command status refresh** shows the chosen path.
 
 MAF10A **Turn Pot** is a read-only shake reminder even if Miot exposes it as a select.
 **Turn Pot Config** is the separate writable reminder switch. No wake-up capability,

@@ -99,6 +99,28 @@ test('Pause shows progress then Resume despite a stale raw Cooking attribute', a
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(2);
 });
+test('post-command direct read confirms Pause without the periodic HA update or refresh acknowledgement', async ({ page }) => {
+  await page.getByRole('button', { name: 'Cooking', exact: true }).click();
+  await page.evaluate(() => {
+    const p = (window as any).preview, f = p.sample;
+    f.ha.services = { xiaomi_miot: { get_properties: {} } };
+    f.ha.callService = async (domain: string, service: string, data: unknown) => {
+      f.calls.push({ domain, service, data });
+      if (service === 'get_properties') {
+        f.ha.states[f.ids.air_fryer].state = 'Paused';
+        await new Promise<void>(() => {});
+      }
+    };
+    p.update(); p.stopUpdates();
+  });
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pausing…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled({ timeout: 2500 });
+  expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([
+    { domain: 'button', service: 'press', data: { entity_id: 'button.renamed_17' } },
+    { domain: 'xiaomi_miot', service: 'get_properties', data: { entity_id: ['sensor.renamed_1'], mapping: [{ siid: 2, piid: 1 }], update_entity: true } },
+  ]);
+});
 test('missing Resume binding is visible and explained instead of retaining Pause', async ({ page }) => {
   await page.getByRole('button', { name: 'Paused', exact: true }).click();
   await page.evaluate(() => {
@@ -195,12 +217,24 @@ test('production bundle registers and controls the fixture without external runt
   await page.evaluate(async () => {
     const { fixture } = await import('/demo/fixture.ts' as string);
     const f = fixture(), card = document.createElement('air-fryer-card') as any;
+    f.ha.services = { xiaomi_miot: { get_properties: {} } };
+    f.ha.callService = async (domain: string, service: string, data: unknown) => {
+      f.calls.push({ domain, service, data });
+      if (service === 'get_properties') {
+        f.ha.states[f.ids.air_fryer].state = 'Cooking';
+        await new Promise<void>(() => {});
+      }
+    };
     card.setConfig({ type: 'custom:air-fryer-card' }); card.hass = f.ha;
     document.body.append(card); (window as any).bundleFixture = f;
   });
   await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('180');
   expect(await page.evaluate(() => (window as any).bundleFixture.calls)).toEqual([]);
   await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled({ timeout: 2500 });
   expect(await page.evaluate(() => (window as any).bundleFixture.calls[0])).toEqual({ domain: 'button', service: 'press', data: { entity_id: 'button.renamed_16' } });
+  expect(await page.evaluate(() => (window as any).bundleFixture.calls[1])).toEqual({ domain: 'xiaomi_miot', service: 'get_properties', data: {
+    entity_id: ['sensor.renamed_1'], mapping: [{ siid: 2, piid: 1 }], update_entity: true,
+  } });
   expect(external).toEqual([]);
 });

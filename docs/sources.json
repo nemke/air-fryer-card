@@ -33,6 +33,22 @@
         {
           "path": "custom_components/xiaomi_miot/select.py",
           "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/select.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/core/device.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/device.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/core/coordinator.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/coordinator.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/__init__.py",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/__init__.py"
+        },
+        {
+          "path": "custom_components/xiaomi_miot/services.yaml",
+          "url": "https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/services.yaml"
         }
       ]
     },
@@ -194,7 +210,9 @@
     "https://contributors.home-assistant.io/frontend/custom-ui/card/",
     "https://www.home-assistant.io/integrations/vesync/#air-fryers",
     "https://www.home-assistant.io/integrations/mcp_server/",
-    "https://developers.openai.com/api/docs/guides/custom-mcp-server"
+    "https://developers.openai.com/api/docs/guides/custom-mcp-server",
+    "https://www.home-assistant.io/actions/homeassistant.update_entity/",
+    "https://www.home-assistant.io/common-tasks/general/#to-define-a-custom-polling-interval"
   ],
   "specifications": [
     {

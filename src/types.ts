@@ -27,6 +27,7 @@ export interface HA {
   states: Record<string, State>;
   entities?: Record<string, Entity>;
   devices?: Record<string, Device>;
+  services?: Record<string, Record<string, unknown>>;
   language?: string;
   locale?: { language: string };
   connection?: {

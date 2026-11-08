@@ -60,3 +60,30 @@ As of 0.1.3, the whole cycle-action row is replaced by a single disabled pending
 indicator during a request. The redraw completes before the HA service call starts,
 independently of HA updates. Normal controls return only after confirmation or an
 explicit error/timeout; paused state restores Resume/Stop.
+
+## Post-command refresh (0.1.4)
+
+For exact model `careli.fryer.maf10a`, selected-device Miot status sensor and advertised
+`xiaomi_miot.get_properties`, read `{siid: 2, piid: 1}` with `update_entity: true`.
+This is a read, not a status property write or a manufacturer API call from the browser.
+Other models do not reuse this mapping. If registered, `homeassistant.update_entity`
+can instead request a selected-status-entity refresh; otherwise use reported updates.
+
+The command-scoped burst has at most three attempts targeting 250/1250/3000 ms after
+control acknowledgement, never less than 1000 ms apart. At most two direct-read service
+acknowledgements can be pending; the coordinator fallback permits one. Observation
+continues independently because the Miot handler dispatches read data before its forced
+coordinator update finishes. Confirmation/cancellation ends further attempts; a failed
+refresh stops the burst and preserves ordinary state observation. No commands are retried.
+
+Source evidence, pinned to the investigated Miot revision:
+
+- [Direct read and dispatch](https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/core/device.py#L1124)
+- [Service handler and forced update](https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/__init__.py#L392)
+- [Service schema](https://github.com/al-one/hass-xiaomi-miot/blob/d6e6dfc8d2de409972a7683c93bbf3fa0119370c/custom_components/xiaomi_miot/services.yaml#L24)
+- [HA update-entity behavior](https://www.home-assistant.io/actions/homeassistant.update_entity/)
+- [HA coordinator throttling caveat](https://www.home-assistant.io/common-tasks/general/#to-define-a-custom-polling-interval)
+
+Unit/browser tests simulate read-driven confirmation, including an unresolved refresh
+acknowledgement and an initially stale read. They are not a live latency benchmark.
+Actual 1–2 second confirmation depends on device/transport/cloud behavior and permissions.

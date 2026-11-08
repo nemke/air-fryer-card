@@ -9,6 +9,7 @@ import { t } from './localize';
 import { snapshot } from './snapshot';
 import { styles } from './styles';
 import { VERSION } from './version';
+import { statusRefresh } from './refresh';
 
 export class AirFryerCard extends LitElement {
   static styles = styles;
@@ -163,6 +164,7 @@ export class AirFryerCard extends LitElement {
     const noFault = d.adapter === 'xiaomi_miot' && d.device.model === 'careli.fryer.maf10a' ? ['0', 'no faults', 'no_faults'] : [];
     const fault = b.fault?.available && !noFault.includes(b.fault.state?.state.trim().toLowerCase() || '');
     const powerReady = !!b.power?.available && b.power.writable && ['on', 'off'].includes(b.power.state?.state || '');
+    const refresh = statusRefresh(this._ha, d);
     return html`<ha-card class=${d.online ? '' : 'inactive'} aria-busy=${this._pending ? 'true' : 'false'}><div class="body">
       <header><div><h2>${this._config.title || d.device.name_by_user || d.device.name || 'Air Fryer'}</h2>
         <div class="subtitle muted">${d.device.manufacturer || 'Air fryer'}</div></div>
@@ -209,6 +211,7 @@ export class AirFryerCard extends LitElement {
       <details><summary>${t(this._ha, 'diagnostics')} · v${VERSION}</summary><dl class="discovery">
         <dt>${t(this._ha, 'version')}</dt><dd>${VERSION}</dd>
         <dt>Adapter</dt><dd>${d.adapter}</dd>
+        <dt>Post-command status refresh</dt><dd>${refresh ? `${refresh.domain}.${refresh.service}` : 'Reported state updates'}</dd>
         <dt>Status state / raw attribute</dt><dd>${b.status?.state?.state || '—'} / ${String(b.status?.state?.attributes['air_fryer.status'] ?? '—')}</dd>
         ${Object.entries(d.bindings).map(([role, binding]) => html`<dt>${role}</dt><dd>${binding.entity.entity_id} · ${binding.evidence}${!binding.writable ? ` · ${t(this._ha, 'readonly')}` : ''}</dd>`)}
         ${Object.entries(d.ambiguous).map(([role, ids]) => html`<dt>${role}: ambiguous</dt><dd>${ids.join(', ')}</dd>`)}

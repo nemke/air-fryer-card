@@ -1,5 +1,6 @@
 import { cycle } from './cycle';
 import { discover } from './discovery';
+import { STATUS_REFRESH_TIMES_MS, statusRefresh } from './refresh';
 import type { Binding, Config, Discovery, HA, Inventory, ProgramDraft, Role } from './types';
 
 export interface Command { domain: string; service: string; data: Record<string, unknown>; }
@@ -100,6 +101,8 @@ export class Commander {
     });
   }
   private async observeAction(getEnvironment: () => Environment, role: Role, deviceId: string): Promise<void> {
+    const initial = getEnvironment();
+    const plan = statusRefresh(initial.ha, discover(initial.ha, initial.inventory, initial.config));
     await this.observe(() => {
       const fresh = getEnvironment(), current = discover(fresh.ha, fresh.inventory, fresh.config);
       if (current.device?.id !== deviceId) throw new Error('The selected device has changed. Check the appliance state.');
@@ -107,20 +110,43 @@ export class Commander {
       if (role === 'pause') return s.paused;
       if (role === 'stop') return s.phase === 'idle' || s.phase === 'off' || s.completed;
       return ['cooking', 'preheat', 'warm', 'delay'].includes(s.phase) && !s.paused && !s.completed;
-    }, 'The device has not confirmed this action. Check its state before trying again.');
+    }, 'The device has not confirmed this action. Check its state before trying again.', () => {
+      const fresh = getEnvironment(), d = discover(fresh.ha, fresh.inventory, fresh.config);
+      if (d.device?.id !== deviceId) return undefined;
+      const command = statusRefresh(fresh.ha, d);
+      return command ? fresh.ha.callService(command.domain, command.service, command.data) : undefined;
+    }, plan?.domain === 'xiaomi_miot' && plan.service === 'get_properties' ? 2 : 1);
   }
-  private async observe(confirmed: () => boolean, timeoutMessage: string): Promise<void> {
-    const deadline = Date.now() + this.observationTimeoutMs;
-    while (!confirmed()) {
-      if (this.abort?.signal.aborted) throw new Error('Command observation cancelled.');
-      if (Date.now() > deadline) throw new Error(timeoutMessage);
-      await new Promise<void>(resolve => {
-        const signal = this.abort?.signal;
-        const done = () => { clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); };
-        const timer = setTimeout(done, 100);
-        signal?.addEventListener('abort', done, { once: true });
-      });
-    }
+  private async observe(confirmed: () => boolean, timeoutMessage: string, refresh?: () => Promise<unknown> | undefined, maxRefreshPending = 1): Promise<void> {
+    const started = Date.now(), deadline = started + this.observationTimeoutMs;
+    const signal = this.abort?.signal;
+    let active = true, inFlight = 0, refreshStopped = false, refreshIndex = 0, lastRefresh = -Infinity;
+    try {
+      while (!confirmed()) {
+        if (signal?.aborted) throw new Error('Command observation cancelled.');
+        const now = Date.now();
+        if (now > deadline) throw new Error(timeoutMessage);
+        if (refresh && !refreshStopped && inFlight < maxRefreshPending && refreshIndex < STATUS_REFRESH_TIMES_MS.length &&
+          now - started >= STATUS_REFRESH_TIMES_MS[refreshIndex] && now - lastRefresh >= 1000) {
+          refreshIndex++; lastRefresh = now; inFlight++;
+          // Miot dispatches the property read before its service handler awaits a
+          // coordinator refresh. Observe the pushed state concurrently, not the
+          // potentially throttled service acknowledgement. At most two direct-read
+          // acknowledgements may be pending; fallback allows one pending call.
+          void Promise.resolve().then(() => {
+            if (!active || signal?.aborted || confirmed()) return;
+            const result = refresh();
+            if (!result) refreshStopped = true;
+            return result;
+          }).catch(() => { refreshStopped = true; }).finally(() => { inFlight--; });
+        }
+        await new Promise<void>(resolve => {
+          const done = () => { clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); };
+          const timer = setTimeout(done, 100);
+          signal?.addEventListener('abort', done, { once: true });
+        });
+      }
+    } finally { active = false; }
   }
   private async lock(task: () => Promise<void>): Promise<void> {
     if (this.pending) throw new Error('A command is already pending.');

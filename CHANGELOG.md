@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Replace the entire cycle-control row with one disabled progress indicator during
+  a request. While pausing, neither Pause nor Stop remains visible; confirmed pause
+  restores Resume/Stop. The same rule applies to Start, Resume and Stop.
+- Flush the pending UI before calling HA and explicitly redraw when it finishes.
+  Browser regressions stop all periodic HA fixture updates and assert that the
+  Pausing-only row is already rendered when the service call begins.
+
 ## 0.1.2
 
 - Start, Pause, Resume and Stop now remain pending until the reported device state

@@ -1347,7 +1347,7 @@ function Z(e, t) {
 	return (e?.locale?.language || e?.language || "").startsWith("sr") && it[t] || rt[t];
 }
 // src/version.ts
-var Q = "0.1.2";
+var Q = "0.1.3";
 // src/snapshot.ts
 function at(e) {
 	let t = [
@@ -1564,15 +1564,16 @@ var ot = o`
 		}
 	}
 	async action(e) {
-		if (!(this._pending || e === "start" && this.drafts.size)) {
-			this._pending = !0, this._pendingAction = e, this._error = "", this._stop = !1;
-			try {
-				e === "start" ? (await this.commander.start(this.environment, this._program), this._program = void 0) : await this.commander.action(this.environment, e);
-			} catch (e) {
-				this._error = e instanceof Error ? e.message : "Command failed.";
-			} finally {
-				this._pending = !1, this._pendingAction = void 0;
-			}
+		if (this._pending || e === "start" && this.drafts.size) return;
+		let t = this._config;
+		this._pending = !0, this._pendingAction = e, this._error = "", this._stop = !1, this.requestUpdate();
+		try {
+			if (await this.updateComplete, !this.isConnected || this._config !== t) return;
+			e === "start" ? (await this.commander.start(this.environment, this._program), this._program = void 0) : await this.commander.action(this.environment, e);
+		} catch (e) {
+			this._error = e instanceof Error ? e.message : "Command failed.";
+		} finally {
+			this._pending = !1, this._pendingAction = void 0, this.requestUpdate();
 		}
 	}
 	progressLabel() {
@@ -1685,18 +1686,19 @@ var ot = o`
       <div class="numbers">${["target_temperature", "duration"].map((e) => r[e] ? this.control(r[e], t) : N)}</div>
       ${r.mode ? this.control(r.mode, t) : N}
       ${["preheat", "auto_keep_warm"].map((e) => r[e] ? this.control(r[e], t) : N)}
-      <div class="actions">${[
+      <div class="actions" data-action-state=${this._pendingAction || "ready"}>${this._pendingAction ? j`
+        <button class="primary" disabled aria-busy="true"><span class="spinner" aria-hidden="true"></span>${this.progressLabel()}</button>` : [
 			"start",
 			"pause",
 			"resume",
 			"stop"
-		].filter((e) => r[e] && (X(e, t) || !t.online) || this._pendingAction === e || e === "resume" && n.paused).map((e) => j`
-        <button class=${e === "start" || e === "resume" ? "primary" : ""} aria-busy=${this._pendingAction === e ? "true" : "false"}
+		].filter((e) => r[e] && (X(e, t) || !t.online) || e === "resume" && n.paused).map((e) => j`
+        <button class=${e === "start" || e === "resume" ? "primary" : ""}
           ?disabled=${this._pending || e === "start" && this.drafts.size > 0 || !X(e, t)}
           @click=${() => {
 			e === "stop" ? this._stop = !0 : this.action(e);
 		}}>
-          ${this._pendingAction === e ? j`<span class="spinner" aria-hidden="true"></span>${this.progressLabel()}` : e === "start" && this._program ? Z(this._ha, "start_selected") : Z(this._ha, e)}</button>`)}</div>
+          ${e === "start" && this._program ? Z(this._ha, "start_selected") : Z(this._ha, e)}</button>`)}</div>
       ${n.paused && !r.resume ? j`<p class="notice muted">${Z(this._ha, "resume_missing")}</p>` : N}
       ${this._stop ? j`<div class="confirm" role="alertdialog" aria-label=${Z(this._ha, "confirm_stop")}><div>${Z(this._ha, "confirm_stop")}</div><div class="actions">
         <button @click=${() => this._stop = !1}>${Z(this._ha, "cancel")}</button><button ?disabled=${this._pending} @click=${() => void this.action("stop")}>${Z(this._ha, "confirm")}</button></div></div>` : N}

@@ -26,6 +26,6 @@ document.querySelector('#locale')!.addEventListener('click', () => {
   sample.ha.locale = { language: sample.ha.locale?.language === 'en' ? 'sr-Latn' : 'en' }; update();
 });
 document.querySelector('#theme')!.addEventListener('click', () => document.documentElement.classList.toggle('light'));
-setInterval(update, 200);
+const updateTimer = setInterval(update, 200);
 // Read-only access for browser regression tests of the local fixture.
-(window as unknown as { preview: unknown }).preview = { get sample() { return sample; }, card, editor, update };
+(window as unknown as { preview: unknown }).preview = { get sample() { return sample; }, card, editor, update, stopUpdates: () => clearInterval(updateTimer) };

@@ -55,3 +55,8 @@ covered by synthetic regression tests, not new live appliance tests.
 On/Off controls are always visible. They remain disabled without a genuine available
 power switch and do not stand in for Start/Stop. Discovery details includes the loaded
 bundle version, current status and copied raw attribute for targeted troubleshooting.
+
+As of 0.1.3, the whole cycle-action row is replaced by a single disabled pending
+indicator during a request. The redraw completes before the HA service call starts,
+independently of HA updates. Normal controls return only after confirmation or an
+explicit error/timeout; paused state restores Resume/Stop.

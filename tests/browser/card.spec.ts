@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
 test.beforeEach(async ({ page }) => { await page.goto('/'); await expect(page.locator('air-fryer-card h2')).toHaveText('Kitchen Air Fryer'); });
 test('autodetects and renders without sending commands', async ({ page }) => {
@@ -46,6 +48,7 @@ test('Start immediately shows progress and remains locked while HA reports the o
     const p = (window as any).preview, f = p.sample;
     f.ha.callService = async (domain: string, service: string, data: unknown) => { f.calls.push({ domain, service, data }); };
     p.update();
+    p.stopUpdates();
   });
   await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
   const starting = page.getByRole('button', { name: 'Starting…', exact: true });
@@ -65,16 +68,33 @@ test('Pause shows progress then Resume despite a stale raw Cooking attribute', a
   await page.evaluate(() => {
     const p = (window as any).preview, f = p.sample;
     f.ha.states[f.ids.air_fryer].attributes['air_fryer.status'] = 4;
-    f.ha.callService = async (domain: string, service: string, data: unknown) => { f.calls.push({ domain, service, data }); };
+    f.ha.callService = async (domain: string, service: string, data: unknown) => {
+      const root = p.card.shadowRoot;
+      (window as any).pauseAtDispatch = {
+        row: root.querySelector('.actions').textContent.trim(),
+        buttons: root.querySelectorAll('.actions button').length,
+        disabled: root.querySelector('.actions button').disabled,
+      };
+      f.calls.push({ domain, service, data });
+    };
     p.update();
+    p.stopUpdates();
   });
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pausing…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0);
+  await expect(page.locator('air-fryer-card .actions button')).toHaveCount(1);
+  expect(await page.evaluate(() => (window as any).pauseAtDispatch)).toEqual({ row: 'Pausing…', buttons: 1, disabled: true });
+  await page.waitForTimeout(400);
+  await expect(page.getByRole('button', { name: 'Pausing…', exact: true })).toBeDisabled();
+  await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-pausing.png' });
   await page.evaluate(() => { const p = (window as any).preview; p.sample.ha.states[p.sample.ids.air_fryer].state = 'Paused'; p.update(); });
   await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Resuming…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0);
   await page.evaluate(() => { const p = (window as any).preview; p.sample.ha.states[p.sample.ids.air_fryer].state = 'Cooking'; p.update(); });
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(2);
@@ -91,8 +111,8 @@ test('missing Resume binding is visible and explained instead of retaining Pause
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
 });
 test('loaded bundle version is visible without expanding diagnostics', async ({ page }) => {
-  await expect(page.locator('air-fryer-card')).toHaveAttribute('data-card-version', '0.1.2');
-  await expect(page.getByText('Discovery details · v0.1.2', { exact: true })).toBeVisible();
+  await expect(page.locator('air-fryer-card')).toHaveAttribute('data-card-version', version);
+  await expect(page.getByText(`Discovery details · v${version}`, { exact: true })).toBeVisible();
 });
 test('discovered power button is on the main card and works with offline cooking sensors', async ({ page }) => {
   await page.getByRole('button', { name: 'Offline', exact: true }).click();

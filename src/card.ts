@@ -75,13 +75,18 @@ export class AirFryerCard extends LitElement {
   }
   private async action(role: Role) {
     if (this._pending || (role === 'start' && this.drafts.size)) return;
+    const configAtClick = this._config;
     this._pending = true; this._pendingAction = role; this._error = ''; this._stop = false;
+    this.requestUpdate();
     try {
+      // Commit feedback before invoking HA, even when no new hass value arrives.
+      await this.updateComplete;
+      if (!this.isConnected || this._config !== configAtClick) return;
       if (role === 'start') { await this.commander.start(this.environment, this._program); this._program = undefined; }
       else await this.commander.action(this.environment, role);
     }
     catch (error) { this._error = error instanceof Error ? error.message : 'Command failed.'; }
-    finally { this._pending = false; this._pendingAction = undefined; }
+    finally { this._pending = false; this._pendingAction = undefined; this.requestUpdate(); }
   }
   private progressLabel(): string {
     const key = this._pendingAction === 'start' ? 'starting' : this._pendingAction === 'pause' ? 'pausing' :
@@ -185,12 +190,14 @@ export class AirFryerCard extends LitElement {
       <div class="numbers">${(['target_temperature', 'duration'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}</div>
       ${b.mode ? this.control(b.mode, d) : nothing}
       ${(['preheat', 'auto_keep_warm'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}
-      <div class="actions">${(['start', 'pause', 'resume', 'stop'] as Role[]).filter(role =>
-        (b[role] && (actionAllowed(role, d) || !d.online)) || this._pendingAction === role || (role === 'resume' && s.paused)).map(role => html`
-        <button class=${role === 'start' || role === 'resume' ? 'primary' : ''} aria-busy=${this._pendingAction === role ? 'true' : 'false'}
+      <div class="actions" data-action-state=${this._pendingAction || 'ready'}>${this._pendingAction ? html`
+        <button class="primary" disabled aria-busy="true"><span class="spinner" aria-hidden="true"></span>${this.progressLabel()}</button>` :
+        (['start', 'pause', 'resume', 'stop'] as Role[]).filter(role =>
+        (b[role] && (actionAllowed(role, d) || !d.online)) || (role === 'resume' && s.paused)).map(role => html`
+        <button class=${role === 'start' || role === 'resume' ? 'primary' : ''}
           ?disabled=${this._pending || (role === 'start' && this.drafts.size > 0) || !actionAllowed(role, d)}
           @click=${() => { if (role === 'stop') this._stop = true; else void this.action(role); }}>
-          ${this._pendingAction === role ? html`<span class="spinner" aria-hidden="true"></span>${this.progressLabel()}` : role === 'start' && this._program ? t(this._ha, 'start_selected') : t(this._ha, role as 'start' | 'pause' | 'resume' | 'stop')}</button>`)}</div>
+          ${role === 'start' && this._program ? t(this._ha, 'start_selected') : t(this._ha, role as 'start' | 'pause' | 'resume' | 'stop')}</button>`)}</div>
       ${s.paused && !b.resume ? html`<p class="notice muted">${t(this._ha, 'resume_missing')}</p>` : nothing}
       ${this._stop ? html`<div class="confirm" role="alertdialog" aria-label=${t(this._ha, 'confirm_stop')}><div>${t(this._ha, 'confirm_stop')}</div><div class="actions">
         <button @click=${() => this._stop = false}>${t(this._ha, 'cancel')}</button><button ?disabled=${this._pending} @click=${() => void this.action('stop')}>${t(this._ha, 'confirm')}</button></div></div>` : nothing}

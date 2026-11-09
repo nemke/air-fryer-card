@@ -36,8 +36,9 @@ air-fryer switch semantics, always within the selected device. Reachable power c
 be controlled while cooking sensors are unavailable. Unavailable or ambiguous power
 cannot be dispatched. MAF10A's public spec has neither a writable power property nor
 a power action; its status is read-only and Cancel Cooking is not physical power-off.
-Without a genuine HA power switch the visible Power button is disabled with an
-explanation. The card does not add a manufacturer API, a smart plug or a status write.
+Without a genuine HA power switch, power controls are hidden and their explanation
+is in Discovery details (since 0.1.6). The card does not add a manufacturer API,
+a smart plug or a status write.
 
 There is no queued recipe/start transaction. A successful action call is a request,
 not proof of a device state change. No automatic retries, scheduled cooking, recipe
@@ -52,9 +53,17 @@ takes precedence over its copied raw numeric attribute; a localized unrecognized
 state can still use the raw attribute as fallback. These conflict/delay cases are
 covered by synthetic regression tests, not new live appliance tests.
 
-On/Off controls are always visible. They remain disabled without a genuine available
-power switch and do not stand in for Start/Stop. Discovery details includes the loaded
-bundle version, current status and copied raw attribute for targeted troubleshooting.
+In 0.1.2–0.1.5 On/Off controls were always visible. Since 0.1.6 they are shown only for
+a bound power switch and remain disabled if that switch is unavailable. They do not
+stand in for Start/Stop. Discovery details includes the loaded bundle version, current
+status and copied raw attribute for targeted troubleshooting.
+
+Since 0.1.6 temperature/time editors are collapsed before cooking and move with preheat
+and auto keep-warm under More settings during active/paused cycles. These retain the
+integration's reported values; they are not a preset database. A local program draft
+suppresses the previous temperature/time in the hero, summary and numeric editors,
+because the schema exposes no preset-value preview. No reads or writes are triggered
+by opening settings, choosing/discarding a program or discarding numeric drafts.
 
 As of 0.1.3, the whole cycle-action row is replaced by a single disabled pending
 indicator during a request. The redraw completes before the HA service call starts,

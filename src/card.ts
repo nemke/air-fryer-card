@@ -117,7 +117,7 @@ export class AirFryerCard extends LitElement {
       const isProgram = b.role === 'mode';
       const current = isProgram && this._program?.entity_id === id ? this._program.option : b.state?.state || '';
       return html`<div class="program"><label for=${id}>${label}</label><select id=${id} aria-label=${label}
-        ?disabled=${disabled || !options.length || (isProgram && !actionAllowed('start', d))} @change=${(e: Event) => {
+        ?disabled=${disabled || !options.length || (isProgram && (!actionAllowed('start', d) || this.drafts.size > 0))} @change=${(e: Event) => {
           const input = e.target as HTMLSelectElement;
           if (isProgram) {
             this._program = input.value === b.state?.state ? undefined : { entity_id: id, device_id: d.device!.id, option: input.value };
@@ -140,7 +140,17 @@ export class AirFryerCard extends LitElement {
         }}><span class="unit">${b.state?.attributes.unit_of_measurement || ''}</span></div>
       <small class="range">${range ? `${range.min}–${range.max} · ${range.step}` : t(this._ha, 'missing_schema')}</small>
       ${draft !== undefined ? html`<button class="apply" ?disabled=${disabled || !draft.trim() || !range}
-        @click=${() => void this.change(b, Number(draft))}>${t(this._ha, 'apply')}</button>` : nothing}</div>`;
+        @click=${() => void this.change(b, Number(draft))}>${t(this._ha, 'apply')}</button>
+        <button class="discard" ?disabled=${this._pending} @click=${() => { this.drafts.delete(id); this.requestUpdate(); }}>${t(this._ha, 'discard_changes')}</button>` : nothing}</div>`;
+  }
+  private settingSummary(b?: Binding): string {
+    if (!b?.available) return '—';
+    const unit = b.state?.attributes.unit_of_measurement;
+    if (b.role === 'duration') {
+      const value = seconds(b.state?.state, unit);
+      if (value !== undefined) return durationLabel(value);
+    }
+    return `${b.state?.state.trim() || '—'}${typeof unit === 'string' ? ` ${unit}` : ''}`;
   }
   private export(d: Discovery) {
     const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot(d, this.commander.lastAction), null, 2)], { type: 'application/json' }));
@@ -156,11 +166,13 @@ export class AirFryerCard extends LitElement {
     const b = d.bindings;
     if (this._program && (this._program.device_id !== d.device.id || this._program.entity_id !== b.mode?.entity.entity_id)) this._program = undefined;
     const configuring = s.phase === 'idle';
+    const active = ['cooking', 'preheat', 'warm', 'delay'].includes(s.phase) && !s.completed;
     const heroTime = configuring && b.duration?.available ? seconds(b.duration.state?.state, b.duration.state?.attributes.unit_of_measurement) : remaining(d);
     const status = s.phase === 'unknown' ? this.display(b.status) : s.phase === 'preheat' ? t(this._ha, 'preheat_phase') : t(this._ha, s.phase);
     const phasesuffix = s.paused ? t(this._ha, 'paused') : s.completed ? t(this._ha, 'completed') : '';
     const secondary: Role[] = ['current_keep_warm', 'weight', 'reservation', 'measure', 'texture', 'reminder', 'reminder_config'];
-    const more = [...secondary.flatMap(role => b[role] ? [b[role]!] : []), ...d.extras];
+    const setup: Role[] = ['target_temperature', 'duration', 'preheat', 'auto_keep_warm'];
+    const more = [...(active ? setup : []), ...secondary].flatMap(role => b[role] ? [b[role]!] : []).concat(d.extras);
     const noFault = d.adapter === 'xiaomi_miot' && d.device.model === 'careli.fryer.maf10a' ? ['0', 'no faults', 'no_faults'] : [];
     const fault = b.fault?.available && !noFault.includes(b.fault.state?.state.trim().toLowerCase() || '');
     const powerReady = !!b.power?.available && b.power.writable && ['on', 'off'].includes(b.power.state?.state || '');
@@ -169,8 +181,9 @@ export class AirFryerCard extends LitElement {
       <header><div><h2>${this._config.title || d.device.name_by_user || d.device.name || 'Air Fryer'}</h2>
         <div class="subtitle muted">${d.device.manufacturer || 'Air fryer'}</div></div>
         <span class="badge"><span class="dot"></span>${status}${phasesuffix ? ` · ${phasesuffix}` : ''}</span></header>
-      <div class="hero"><div><div class="hero-label muted">${t(this._ha, configuring ? 'duration' : 'remaining')}</div><div class="time">${durationLabel(heroTime)}</div>
-        <div class="status">${this._program ? this._program.option.trim() : b.mode ? this.display(b.mode) : status}</div>
+      <div class="hero"><div><div class="hero-label muted">${t(this._ha, this._program && !active ? 'selected_program' : configuring ? 'duration' : 'remaining')}</div>
+        <div class="time">${this._program && !active ? this._program.option.trim() : durationLabel(heroTime)}</div>
+        <div class="status">${this._program && !active ? t(this._ha, 'program_defaults_short') : b.mode ? this.display(b.mode) : status}</div>
         ${b.current_temperature ? html`<small>${t(this._ha, 'current_temperature')}: ${this.display(b.current_temperature)}</small>` : nothing}</div>
         <svg class="illustration" viewBox="0 0 118 134" aria-hidden="true"><rect x="15" y="10" width="88" height="116" rx="27" fill="currentColor" opacity=".12"/>
           <path d="M29 70h60v30a13 13 0 0 1-13 13H42a13 13 0 0 1-13-13Z" fill="currentColor" opacity=".18"/>
@@ -182,16 +195,22 @@ export class AirFryerCard extends LitElement {
       ${!d.online ? html`<p class="hint muted">${t(this._ha, 'offline_hint')}</p>` : nothing}
       ${s.reminder ? html`<p class="hint">${t(this._ha, 'shake')}</p>` : nothing}
       ${fault ? html`<p class="error">${t(this._ha, 'fault')}: ${this.display(b.fault)}</p>` : nothing}
-      <section class="power-section" aria-label=${t(this._ha, 'power')}><div class="power-row"><span>⏻ ${t(this._ha, 'power')}</span>
+      ${b.power ? html`<section class="power-section" aria-label=${t(this._ha, 'power')}><div class="power-row"><span>⏻ ${t(this._ha, 'power')}</span>
         <div class="power-buttons" role="group" aria-label=${t(this._ha, 'power')}>
           ${([true, false] as const).map(on => html`<button aria-label=${t(this._ha, on ? 'turn_on' : 'turn_off')}
             aria-pressed=${powerReady && b.power?.state?.state === (on ? 'on' : 'off') ? 'true' : 'false'}
             ?disabled=${this._pending || !powerReady || b.power?.state?.state === (on ? 'on' : 'off')}
             @click=${() => { if (b.power) void this.change(b.power, on); }}>${t(this._ha, on ? 'power_on' : 'power_off')}</button>`)}
-        </div></div>${!b.power || !powerReady ? html`<p class="notice muted">${t(this._ha, b.power ? 'power_unavailable' : 'power_missing')}</p>` : nothing}</section>
-      <div class="numbers">${(['target_temperature', 'duration'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}</div>
-      ${b.mode ? this.control(b.mode, d) : nothing}
-      ${(['preheat', 'auto_keep_warm'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}
+        </div></div>${!powerReady ? html`<p class="notice muted">${t(this._ha, 'power_unavailable')}</p>` : nothing}</section>` : nothing}
+      ${!active ? html`
+        ${b.mode ? this.control(b.mode, d) : nothing}
+        ${setup.some(role => b[role]) ? html`<details class="cook-settings">
+          <summary><span>${t(this._ha, 'temperature_time')}</span><span class="settings-value">${this._program ? t(this._ha, 'program_defaults_short') :
+            [b.target_temperature, b.duration].filter((binding): binding is Binding => !!binding).map(binding => this.settingSummary(binding)).join(' · ')}</span></summary>
+          ${this._program ? html`<p class="notice muted">${t(this._ha, 'program_defaults')}</p>` : html`
+            <div class="numbers">${(['target_temperature', 'duration'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}</div>`}
+          ${(['preheat', 'auto_keep_warm'] as Role[]).map(role => b[role] ? this.control(b[role]!, d) : nothing)}
+        </details>` : nothing}` : nothing}
       <div class="actions" data-action-state=${this._pendingAction || 'ready'}>${this._pendingAction ? html`
         <button class="primary" disabled aria-busy="true"><span class="spinner" aria-hidden="true"></span>${this.progressLabel()}</button>` :
         (['start', 'pause', 'resume', 'stop'] as Role[]).filter(role =>
@@ -208,10 +227,13 @@ export class AirFryerCard extends LitElement {
       ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : nothing}
       ${this.drafts.size ? html`<p class="notice muted">${t(this._ha, 'apply')} ${t(this._ha, 'temperature').toLowerCase()} / ${t(this._ha, 'duration').toLowerCase()}</p>` : nothing}
       ${Object.keys(d.ambiguous).length || this._warning ? html`<p class="notice muted">${t(this._ha, 'discovery_warning')}</p>` : nothing}
-      ${more.length ? html`<details><summary>${t(this._ha, 'more')}</summary>${repeat(more, b => b.entity.entity_id, b => this.control(b, d))}</details>` : nothing}
+      ${more.length ? html`<details class="more-settings"><summary>${t(this._ha, 'more')}</summary>
+        ${active ? html`<p class="notice muted">${t(this._ha, 'reported_settings')}</p>` : nothing}
+        ${repeat(more, b => b.entity.entity_id, b => this.control(b, d))}</details>` : nothing}
       <details><summary>${t(this._ha, 'diagnostics')} · v${VERSION}</summary><dl class="discovery">
         <dt>${t(this._ha, 'version')}</dt><dd>${VERSION}</dd>
         <dt>Adapter</dt><dd>${d.adapter}</dd>
+        ${!b.power ? html`<dt>${t(this._ha, 'power')}</dt><dd>${t(this._ha, 'power_missing')}</dd>` : nothing}
         <dt>Post-command status refresh</dt><dd>${refresh ? `${refresh.domain}.${refresh.service}` : 'Reported state updates'}</dd>
         ${this.commander.lastAction ? html`
           <dt>Last command / result</dt><dd>${this.commander.lastAction.role} / ${this.commander.lastAction.phase}</dd>

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.6
+
+- Replace the always-visible temperature/time editors with a compact, collapsed
+  Temperature & time row. Preheat and automatic keep-warm join the expanded settings.
+- Keep cooking, preheat, scheduled and paused views focused on remaining time and
+  cycle controls. Setup settings remain available under More settings, labelled as
+  the last values reported by the fryer.
+- A locally selected program shows its name and Set by program on Start, without
+  presenting the previous program's temperature/time as a preset preview. No preset
+  values are invented and choosing a program still sends no commands.
+- Allow numeric drafts to be discarded. Apply/discard drafts before selecting another
+  program, preserving the existing requirement to confirm them before Start.
+- Hide unsupported Power controls from the main card; retain the explanation in
+  Discovery details. Real discovered power controls keep working, including while
+  cooking sensors are offline.
+
 ## 0.1.5
 
 - Begin status observation and the bounded read burst when a cycle command is dispatched,

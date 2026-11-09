@@ -12,6 +12,7 @@ export const styles = css`
   .dot { width: 6px; height: 6px; background: #a6bd92; border-radius: 50%; }
   .inactive .dot { background: var(--disabled-text-color, #8b918b); }
   .hero { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 155px; margin: 14px 0 8px; }
+  .hero > div { min-width: 0; overflow-wrap: anywhere; }
   .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.6px; }
   .time { font-size: clamp(28px, 7vw, 40px); font-weight: 600; letter-spacing: -1.4px; line-height: 1.3; margin: 5px 0; }
   .status { font-size: 14px; color: var(--primary-text-color); }
@@ -26,6 +27,7 @@ export const styles = css`
   .number-line .unit { font-size: 13px; white-space: nowrap; }
   .range { display: block; margin-top: 5px; font-size: 10px; }
   .apply { margin-top: 9px; width: 100%; }
+  .discard { margin-top: 6px; width: 100%; font-size: 12px; }
   input, select, button { font-family: inherit; color: inherit; font-size: 14px; }
   input, select { accent-color: var(--primary-color, #bacfa4); }
   select, .editor-input { width: 100%; background: var(--secondary-background-color, #ffffff08); padding: 12px; border: 1px solid var(--divider-color, #ffffff1c); border-radius: 10px; }
@@ -60,6 +62,14 @@ export const styles = css`
   details { border-top: 1px solid var(--divider-color, #ffffff12); margin-top: 18px; padding-top: 15px; }
   summary { cursor: pointer; font-size: 13px; color: var(--secondary-text-color, #b4bcb2); }
   details .control, details .program { margin-top: 12px; }
+  details.cook-settings { border: 1px solid var(--divider-color, #ffffff1c); border-radius: 12px; padding: 0 12px; margin-top: 12px; }
+  .cook-settings summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 0; min-height: 46px; color: var(--primary-text-color); list-style: none; }
+  .cook-settings summary::before { content: '›'; font-size: 18px; line-height: 1; }
+  .cook-settings[open] summary::before { transform: rotate(90deg); }
+  .cook-settings summary::-webkit-details-marker { display: none; }
+  .settings-value { margin-left: auto; color: var(--secondary-text-color, #a8afa8); font-size: 12px; overflow-wrap: anywhere; }
+  .cook-settings .numbers .control { margin-top: 0; }
+  .cook-settings[open] { padding-bottom: 8px; }
   .reading { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 10px 0; }
   .discovery { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
   .discovery dt { font-weight: 650; margin-top: 8px; }

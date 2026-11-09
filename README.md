@@ -50,8 +50,14 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
 
 - Discovers entities by exact device membership and semantic translation keys, with
   Miot unique-ID fallback. It does not depend on English names or entity prefixes.
-- Edits temperature and cooking duration inline, using live min/max/step/unit metadata.
-- Shows real program options, preheat and automatic keep-warm controls.
+- Keeps temperature and duration in a compact **Temperature & time** disclosure,
+  using live min/max/step/unit metadata when expanded. Preheat and automatic keep-warm
+  are grouped with those settings.
+- Focuses the cooking/paused view on remaining time and cycle controls. Setup controls
+  move under **More settings** and retain their reported values and adjustment capability.
+- Shows real program options. A newly selected program shows **Set by program on Start**
+  instead of reusing the previous temperature/time as a preset preview: HA does not
+  provide that preview, and requesting the change can itself start cooking.
 - Keeps program selection local until **Start selected program** is pressed. Some
   fryers start cooking on a mode write; a changed program is therefore sent once
   without an additional Start command. Discard a selection without sending anything.
@@ -67,8 +73,8 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
   cooking commands or create continuous polling.
 - Shows power on/off on the main card when a genuine power switch is discovered,
   including Miot `on`/`switch` semantics. A reachable power switch works even when
-  cooking sensors are offline. Otherwise the card explains that physical power is
-  unavailable remotely. MAF10A's public spec exposes no separate power command.
+  cooking sensors are offline. Unsupported power controls are hidden; their explanation
+  remains in Discovery details. MAF10A's public spec exposes no separate power command.
 - Keeps additional settings under **More settings**, with diagnostics separate.
 - Retains controls when the fryer is offline; available action buttons do not imply
   the appliance is online.
@@ -76,7 +82,8 @@ or has ambiguous duplicate entities. Choose by entity label; no manual ID harves
   program options keep the integration's labels and exact command values.
 - Provides an allowlisted schema download with identifiers and names replaced.
 
-Apply a changed numeric setting before Start. The card waits for the reported value
+Apply or discard a changed numeric setting before Start or selecting another program.
+The card waits for the reported value
 to match before enabling another command. Program changes are staged separately and
 never sent by the dropdown itself. Starting a changed program waits for a cooking
 phase to be reported; if that times out, check the appliance before trying again.
@@ -90,13 +97,13 @@ Resume button explains how to inspect or override discovery.
 ## Updating and checking the loaded version
 
 After updating in HACS, fully reload the dashboard browser/app. The collapsed
-**Discovery details · v0.1.5** label reports the JavaScript actually loaded by the
+**Discovery details · v0.1.6** label reports the JavaScript actually loaded by the
 browser. HACS showing an installed version does not by itself establish that the
 open dashboard has reloaded it.
 
 If the label is absent or shows an older version, reload without cache and check for
 duplicate/old dashboard resources. For a manually registered resource, a versioned
-URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.5` can refresh the cached
+URL such as `/hacsfiles/air-fryer-card/air-fryer-card.js?v=0.1.6` can refresh the cached
 module. Reload the page after changing a resource; custom elements do not replace
 an already registered older class within the same page.
 

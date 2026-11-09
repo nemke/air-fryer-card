@@ -253,14 +253,14 @@ var v = class extends HTMLElement {
 };
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[g("elementProperties")] = /* @__PURE__ */ new Map(), v[g("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: v }), (h.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
-var ae = globalThis, oe = (e) => e, y = ae.trustedTypes, se = y ? y.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, b = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, S = "?" + x, ce = `<${S}>`, C = document, w = () => C.createComment(""), T = (e) => e === null || typeof e != "object" && typeof e != "function", E = Array.isArray, le = (e) => E(e) || typeof e?.[Symbol.iterator] == "function", D = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ue = /-->/g, de = />/g, k = RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), fe = /'/g, pe = /"/g, me = /^(?:script|style|textarea|title)$/i, A = ((e) => (t, ...n) => ({
+var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, se = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, S = "?" + x, ce = `<${S}>`, C = document, w = () => C.createComment(""), T = (e) => e === null || typeof e != "object" && typeof e != "function", E = Array.isArray, le = (e) => E(e) || typeof e?.[Symbol.iterator] == "function", D = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ue = /-->/g, de = />/g, k = RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), fe = /'/g, pe = /"/g, me = /^(?:script|style|textarea|title)$/i, A = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
 }))(1), j = Symbol.for("lit-noChange"), M = Symbol.for("lit-nothing"), he = /* @__PURE__ */ new WeakMap(), N = C.createTreeWalker(C, 129);
 function ge(e, t) {
 	if (!E(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return se === void 0 ? t : se.createHTML(t);
+	return oe === void 0 ? t : oe.createHTML(t);
 }
 var _e = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = O;
@@ -268,7 +268,7 @@ var _e = (e, t) => {
 		let n = e[t], s, c, l = -1, u = 0;
 		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === O ? c[1] === "!--" ? o = ue : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = k) : (me.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = k) : o = de : o === k ? c[0] === ">" ? (o = i ?? O, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? k : c[3] === "\"" ? pe : fe) : o === pe || o === fe ? o = k : o === ue || o === de ? o = O : (o = k, i = void 0);
 		let d = o === k && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === O ? n + ce : l >= 0 ? (r.push(s), n.slice(0, l) + b + n.slice(l) + x + d) : n + x + (l === -2 ? t : d);
+		a += o === O ? n + ce : l >= 0 ? (r.push(s), n.slice(0, l) + se + n.slice(l) + x + d) : n + x + (l === -2 ? t : d);
 	}
 	return [ge(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, P = class e {
@@ -282,7 +282,7 @@ var _e = (e, t) => {
 		}
 		for (; (i = N.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(b)) {
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(se)) {
 					let t = u[o++], n = i.getAttribute(e).split(x), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
@@ -298,7 +298,7 @@ var _e = (e, t) => {
 				if (me.test(i.tagName)) {
 					let e = i.textContent.split(x), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = y ? y.emptyScript : "";
+						i.textContent = b ? b.emptyScript : "";
 						for (let n = 0; n < t; n++) i.append(e[n], w()), N.nextNode(), c.push({
 							type: 2,
 							index: ++a
@@ -408,8 +408,8 @@ var ve = class {
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = oe(e).nextSibling;
-			oe(e).remove(), e = t;
+			let t = ae(e).nextSibling;
+			ae(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -474,7 +474,7 @@ var ve = class {
 		F(this, e);
 	}
 }, Ce = {
-	M: b,
+	M: se,
 	P: x,
 	A: S,
 	C: 1,
@@ -488,8 +488,8 @@ var ve = class {
 	U: xe,
 	B: ye,
 	F: Se
-}, we = ae.litHtmlPolyfillSupport;
-we?.(P, I), (ae.litHtmlVersions ??= []).push("3.3.3");
+}, we = y.litHtmlPolyfillSupport;
+we?.(P, I), (y.litHtmlVersions ??= []).push("3.3.3");
 var Te = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
@@ -1294,6 +1294,12 @@ var at = {
 	discard_program: "Discard program selection",
 	turn_on: "Turn on",
 	turn_off: "Turn off",
+	discard_changes: "Discard changes",
+	temperature_time: "Temperature & time",
+	selected_program: "Selected program",
+	program_defaults_short: "Set by program on Start",
+	program_defaults: "The fryer supplies temperature and time when this program starts. Discard the selection to adjust the current settings.",
+	reported_settings: "Settings last reported by the fryer. Program settings may take time to update.",
 	power_on: "On",
 	power_off: "Off",
 	starting: "Starting…",
@@ -1368,6 +1374,12 @@ var at = {
 	discard_program: "Poništi izbor programa",
 	turn_on: "Uključi",
 	turn_off: "Isključi",
+	discard_changes: "Poništi izmene",
+	temperature_time: "Temperatura i vreme",
+	selected_program: "Izabrani program",
+	program_defaults_short: "Program podešava pri pokretanju",
+	program_defaults: "Uređaj određuje temperaturu i vreme pri pokretanju ovog programa. Poništite izbor da biste izmenili trenutna podešavanja.",
+	reported_settings: "Poslednja podešavanja koja je uređaj prijavio. Podešavanja programa mogu da se ažuriraju sa zakašnjenjem.",
 	power_on: "Uključi",
 	power_off: "Isključi",
 	starting: "Pokretanje…",
@@ -1433,7 +1445,7 @@ function Z(e, t) {
 	return (e?.locale?.language || e?.language || "").startsWith("sr") && ot[t] || at[t];
 }
 // src/version.ts
-var Q = "0.1.5";
+var Q = "0.1.6";
 // src/snapshot.ts
 function st(e, t) {
 	let n = [
@@ -1504,6 +1516,7 @@ var ct = o`
   .dot { width: 6px; height: 6px; background: #a6bd92; border-radius: 50%; }
   .inactive .dot { background: var(--disabled-text-color, #8b918b); }
   .hero { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 155px; margin: 14px 0 8px; }
+  .hero > div { min-width: 0; overflow-wrap: anywhere; }
   .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.6px; }
   .time { font-size: clamp(28px, 7vw, 40px); font-weight: 600; letter-spacing: -1.4px; line-height: 1.3; margin: 5px 0; }
   .status { font-size: 14px; color: var(--primary-text-color); }
@@ -1518,6 +1531,7 @@ var ct = o`
   .number-line .unit { font-size: 13px; white-space: nowrap; }
   .range { display: block; margin-top: 5px; font-size: 10px; }
   .apply { margin-top: 9px; width: 100%; }
+  .discard { margin-top: 6px; width: 100%; font-size: 12px; }
   input, select, button { font-family: inherit; color: inherit; font-size: 14px; }
   input, select { accent-color: var(--primary-color, #bacfa4); }
   select, .editor-input { width: 100%; background: var(--secondary-background-color, #ffffff08); padding: 12px; border: 1px solid var(--divider-color, #ffffff1c); border-radius: 10px; }
@@ -1552,6 +1566,14 @@ var ct = o`
   details { border-top: 1px solid var(--divider-color, #ffffff12); margin-top: 18px; padding-top: 15px; }
   summary { cursor: pointer; font-size: 13px; color: var(--secondary-text-color, #b4bcb2); }
   details .control, details .program { margin-top: 12px; }
+  details.cook-settings { border: 1px solid var(--divider-color, #ffffff1c); border-radius: 12px; padding: 0 12px; margin-top: 12px; }
+  .cook-settings summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 0; min-height: 46px; color: var(--primary-text-color); list-style: none; }
+  .cook-settings summary::before { content: '›'; font-size: 18px; line-height: 1; }
+  .cook-settings[open] summary::before { transform: rotate(90deg); }
+  .cook-settings summary::-webkit-details-marker { display: none; }
+  .settings-value { margin-left: auto; color: var(--secondary-text-color, #a8afa8); font-size: 12px; overflow-wrap: anywhere; }
+  .cook-settings .numbers .control { margin-top: 0; }
+  .cook-settings[open] { padding-bottom: 8px; }
   .reading { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 10px 0; }
   .discovery { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
   .discovery dt { font-weight: 650; margin-top: 8px; }
@@ -1705,7 +1727,7 @@ var ct = o`
 		if (e.domain === "select") {
 			let a = Array.isArray(e.state?.attributes.options) ? e.state.attributes.options.filter((e) => typeof e == "string") : [], o = e.role === "mode", s = o && this._program?.entity_id === n ? this._program.option : e.state?.state || "";
 			return A`<div class="program"><label for=${n}>${r}</label><select id=${n} aria-label=${r}
-        ?disabled=${i || !a.length || o && !X("start", t)} @change=${(r) => {
+        ?disabled=${i || !a.length || o && (!X("start", t) || this.drafts.size > 0)} @change=${(r) => {
 				let i = r.target;
 				o ? (this._program = i.value === e.state?.state ? void 0 : {
 					entity_id: n,
@@ -1727,7 +1749,19 @@ var ct = o`
 		}}><span class="unit">${e.state?.attributes.unit_of_measurement || ""}</span></div>
       <small class="range">${a ? `${a.min}–${a.max} · ${a.step}` : Z(this._ha, "missing_schema")}</small>
       ${o === void 0 ? M : A`<button class="apply" ?disabled=${i || !o.trim() || !a}
-        @click=${() => void this.change(e, Number(o))}>${Z(this._ha, "apply")}</button>`}</div>`;
+        @click=${() => void this.change(e, Number(o))}>${Z(this._ha, "apply")}</button>
+        <button class="discard" ?disabled=${this._pending} @click=${() => {
+			this.drafts.delete(n), this.requestUpdate();
+		}}>${Z(this._ha, "discard_changes")}</button>`}</div>`;
+	}
+	settingSummary(e) {
+		if (!e?.available) return "—";
+		let t = e.state?.attributes.unit_of_measurement;
+		if (e.role === "duration") {
+			let n = Ke(e.state?.state, t);
+			if (n !== void 0) return Je(n);
+		}
+		return `${e.state?.state.trim() || "—"}${typeof t == "string" ? ` ${t}` : ""}`;
 	}
 	export(e) {
 		let t = URL.createObjectURL(new Blob([JSON.stringify(st(e, this.commander.lastAction), null, 2)], { type: "application/json" })), n = document.createElement("a");
@@ -1740,7 +1774,12 @@ var ct = o`
       ${this._warning ? A`<p class="error">${this._warning}</p>` : M}</div></ha-card>`;
 		let r = t.bindings;
 		this._program && (this._program.device_id !== t.device.id || this._program.entity_id !== r.mode?.entity.entity_id) && (this._program = void 0);
-		let i = n.phase === "idle", a = i && r.duration?.available ? Ke(r.duration.state?.state, r.duration.state?.attributes.unit_of_measurement) : qe(t), o = n.phase === "unknown" ? this.display(r.status) : n.phase === "preheat" ? Z(this._ha, "preheat_phase") : Z(this._ha, n.phase), s = n.paused ? Z(this._ha, "paused") : n.completed ? Z(this._ha, "completed") : "", c = [...[
+		let i = n.phase === "idle", a = [
+			"cooking",
+			"preheat",
+			"warm",
+			"delay"
+		].includes(n.phase) && !n.completed, o = i && r.duration?.available ? Ke(r.duration.state?.state, r.duration.state?.attributes.unit_of_measurement) : qe(t), s = n.phase === "unknown" ? this.display(r.status) : n.phase === "preheat" ? Z(this._ha, "preheat_phase") : Z(this._ha, n.phase), c = n.paused ? Z(this._ha, "paused") : n.completed ? Z(this._ha, "completed") : "", l = [
 			"current_keep_warm",
 			"weight",
 			"reservation",
@@ -1748,17 +1787,23 @@ var ct = o`
 			"texture",
 			"reminder",
 			"reminder_config"
-		].flatMap((e) => r[e] ? [r[e]] : []), ...t.extras], l = t.adapter === "xiaomi_miot" && t.device.model === "careli.fryer.maf10a" ? [
+		], u = [
+			"target_temperature",
+			"duration",
+			"preheat",
+			"auto_keep_warm"
+		], d = [...a ? u : [], ...l].flatMap((e) => r[e] ? [r[e]] : []).concat(t.extras), f = t.adapter === "xiaomi_miot" && t.device.model === "careli.fryer.maf10a" ? [
 			"0",
 			"no faults",
 			"no_faults"
-		] : [], u = r.fault?.available && !l.includes(r.fault.state?.state.trim().toLowerCase() || ""), d = !!r.power?.available && r.power.writable && ["on", "off"].includes(r.power.state?.state || ""), f = Xe(this._ha, t);
+		] : [], p = r.fault?.available && !f.includes(r.fault.state?.state.trim().toLowerCase() || ""), m = !!r.power?.available && r.power.writable && ["on", "off"].includes(r.power.state?.state || ""), h = Xe(this._ha, t);
 		return A`<ha-card class=${t.online ? "" : "inactive"} aria-busy=${this._pending ? "true" : "false"}><div class="body">
       <header><div><h2>${this._config.title || t.device.name_by_user || t.device.name || "Air Fryer"}</h2>
         <div class="subtitle muted">${t.device.manufacturer || "Air fryer"}</div></div>
-        <span class="badge"><span class="dot"></span>${o}${s ? ` · ${s}` : ""}</span></header>
-      <div class="hero"><div><div class="hero-label muted">${Z(this._ha, i ? "duration" : "remaining")}</div><div class="time">${Je(a)}</div>
-        <div class="status">${this._program ? this._program.option.trim() : r.mode ? this.display(r.mode) : o}</div>
+        <span class="badge"><span class="dot"></span>${s}${c ? ` · ${c}` : ""}</span></header>
+      <div class="hero"><div><div class="hero-label muted">${Z(this._ha, this._program && !a ? "selected_program" : i ? "duration" : "remaining")}</div>
+        <div class="time">${this._program && !a ? this._program.option.trim() : Je(o)}</div>
+        <div class="status">${this._program && !a ? Z(this._ha, "program_defaults_short") : r.mode ? this.display(r.mode) : s}</div>
         ${r.current_temperature ? A`<small>${Z(this._ha, "current_temperature")}: ${this.display(r.current_temperature)}</small>` : M}</div>
         <svg class="illustration" viewBox="0 0 118 134" aria-hidden="true"><rect x="15" y="10" width="88" height="116" rx="27" fill="currentColor" opacity=".12"/>
           <path d="M29 70h60v30a13 13 0 0 1-13 13H42a13 13 0 0 1-13-13Z" fill="currentColor" opacity=".18"/>
@@ -1769,19 +1814,24 @@ var ct = o`
         </svg></div>
       ${t.online ? M : A`<p class="hint muted">${Z(this._ha, "offline_hint")}</p>`}
       ${n.reminder ? A`<p class="hint">${Z(this._ha, "shake")}</p>` : M}
-      ${u ? A`<p class="error">${Z(this._ha, "fault")}: ${this.display(r.fault)}</p>` : M}
-      <section class="power-section" aria-label=${Z(this._ha, "power")}><div class="power-row"><span>⏻ ${Z(this._ha, "power")}</span>
+      ${p ? A`<p class="error">${Z(this._ha, "fault")}: ${this.display(r.fault)}</p>` : M}
+      ${r.power ? A`<section class="power-section" aria-label=${Z(this._ha, "power")}><div class="power-row"><span>⏻ ${Z(this._ha, "power")}</span>
         <div class="power-buttons" role="group" aria-label=${Z(this._ha, "power")}>
           ${[!0, !1].map((e) => A`<button aria-label=${Z(this._ha, e ? "turn_on" : "turn_off")}
-            aria-pressed=${d && r.power?.state?.state === (e ? "on" : "off") ? "true" : "false"}
-            ?disabled=${this._pending || !d || r.power?.state?.state === (e ? "on" : "off")}
+            aria-pressed=${m && r.power?.state?.state === (e ? "on" : "off") ? "true" : "false"}
+            ?disabled=${this._pending || !m || r.power?.state?.state === (e ? "on" : "off")}
             @click=${() => {
 			r.power && this.change(r.power, e);
 		}}>${Z(this._ha, e ? "power_on" : "power_off")}</button>`)}
-        </div></div>${!r.power || !d ? A`<p class="notice muted">${Z(this._ha, r.power ? "power_unavailable" : "power_missing")}</p>` : M}</section>
-      <div class="numbers">${["target_temperature", "duration"].map((e) => r[e] ? this.control(r[e], t) : M)}</div>
-      ${r.mode ? this.control(r.mode, t) : M}
-      ${["preheat", "auto_keep_warm"].map((e) => r[e] ? this.control(r[e], t) : M)}
+        </div></div>${m ? M : A`<p class="notice muted">${Z(this._ha, "power_unavailable")}</p>`}</section>` : M}
+      ${a ? M : A`
+        ${r.mode ? this.control(r.mode, t) : M}
+        ${u.some((e) => r[e]) ? A`<details class="cook-settings">
+          <summary><span>${Z(this._ha, "temperature_time")}</span><span class="settings-value">${this._program ? Z(this._ha, "program_defaults_short") : [r.target_temperature, r.duration].filter((e) => !!e).map((e) => this.settingSummary(e)).join(" · ")}</span></summary>
+          ${this._program ? A`<p class="notice muted">${Z(this._ha, "program_defaults")}</p>` : A`
+            <div class="numbers">${["target_temperature", "duration"].map((e) => r[e] ? this.control(r[e], t) : M)}</div>`}
+          ${["preheat", "auto_keep_warm"].map((e) => r[e] ? this.control(r[e], t) : M)}
+        </details>` : M}`}
       <div class="actions" data-action-state=${this._pendingAction || "ready"}>${this._pendingAction ? A`
         <button class="primary" disabled aria-busy="true"><span class="spinner" aria-hidden="true"></span>${this.progressLabel()}</button>` : [
 			"start",
@@ -1802,11 +1852,14 @@ var ct = o`
       ${this._error ? A`<p class="error" role="alert">${this._error}</p>` : M}
       ${this.drafts.size ? A`<p class="notice muted">${Z(this._ha, "apply")} ${Z(this._ha, "temperature").toLowerCase()} / ${Z(this._ha, "duration").toLowerCase()}</p>` : M}
       ${Object.keys(t.ambiguous).length || this._warning ? A`<p class="notice muted">${Z(this._ha, "discovery_warning")}</p>` : M}
-      ${c.length ? A`<details><summary>${Z(this._ha, "more")}</summary>${Le(c, (e) => e.entity.entity_id, (e) => this.control(e, t))}</details>` : M}
+      ${d.length ? A`<details class="more-settings"><summary>${Z(this._ha, "more")}</summary>
+        ${a ? A`<p class="notice muted">${Z(this._ha, "reported_settings")}</p>` : M}
+        ${Le(d, (e) => e.entity.entity_id, (e) => this.control(e, t))}</details>` : M}
       <details><summary>${Z(this._ha, "diagnostics")} · v${Q}</summary><dl class="discovery">
         <dt>${Z(this._ha, "version")}</dt><dd>${Q}</dd>
         <dt>Adapter</dt><dd>${t.adapter}</dd>
-        <dt>Post-command status refresh</dt><dd>${f ? `${f.domain}.${f.service}` : "Reported state updates"}</dd>
+        ${r.power ? M : A`<dt>${Z(this._ha, "power")}</dt><dd>${Z(this._ha, "power_missing")}</dd>`}
+        <dt>Post-command status refresh</dt><dd>${h ? `${h.domain}.${h.service}` : "Reported state updates"}</dd>
         ${this.commander.lastAction ? A`
           <dt>Last command / result</dt><dd>${this.commander.lastAction.role} / ${this.commander.lastAction.phase}</dd>
           <dt>HA service response</dt><dd>${this.commander.lastAction.serviceMs === void 0 ? "Pending" : `${this.commander.lastAction.serviceMs} ms`}${this.commander.lastAction.serviceFailed ? " · failed" : ""}</dd>

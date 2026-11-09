@@ -1,6 +1,6 @@
 {
   "name": "air-fryer-card",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Home Assistant air fryer card with automatic capability discovery",
   "type": "module",
   "private": true,

@@ -4,15 +4,18 @@ const { version } = JSON.parse(readFileSync(new URL('../../package.json', import
 
 test.beforeEach(async ({ page }) => { await page.goto('/'); await expect(page.locator('air-fryer-card h2')).toHaveText('Kitchen Air Fryer'); });
 test('autodetects and renders without sending commands', async ({ page }) => {
-  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('180');
+  await expect(page.locator('air-fryer-card .cook-settings summary')).toContainText('180 °C · 20 min');
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeHidden();
   await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toHaveValue('Manual');
   expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([]);
 });
 test('number edit uses the correct entity, bounds and value; blocks Start until applied', async ({ page }) => {
+  await page.locator('air-fryer-card .cook-settings summary').click();
   await page.getByRole('spinbutton', { name: 'Temperature', exact: true }).fill('230');
   await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toBeEnabled();
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as any).preview.sample.calls)).toEqual([{ domain: 'number', service: 'set_value', data: { entity_id: 'number.renamed_4', value: 230 } }]);
 });
 test('program selection is local, survives HA/locale updates, and sends one command only on Start', async ({ page }) => {
@@ -20,7 +23,8 @@ test('program selection is local, survives HA/locale updates, and sends one comm
   await page.waitForTimeout(450);
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
   await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toHaveValue('Steak ');
-  await page.locator('#locale').click(); await expect(page.getByRole('spinbutton', { name: 'Temperatura', exact: true })).toBeVisible();
+  await page.locator('#locale').click(); await expect(page.locator('air-fryer-card .hero')).toContainText('Program podešava pri pokretanju');
+  await expect(page.getByRole('spinbutton', { name: 'Temperatura', exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
   await page.getByRole('button', { name: 'Pokreni izabrani program', exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(1);
@@ -35,11 +39,75 @@ test('discarding or repeatedly changing a program sends no commands', async ({ p
   await expect(select).toHaveValue('Manual');
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
 });
-test('power is clearly unavailable when no real power entity exists', async ({ page }) => {
-  await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Turn off', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Turn off', exact: true })).toBeDisabled();
+test('selected program never inherits the current temperature/time as a preset preview', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.getByRole('combobox', { name: 'Program', exact: true }).selectOption('French Fries');
+  await expect(page.locator('air-fryer-card .hero .time')).toHaveText('French Fries');
+  await expect(page.locator('air-fryer-card .hero')).not.toContainText('20 min');
+  const summary = page.locator('air-fryer-card .cook-settings summary');
+  await expect(summary).toContainText('Set by program on Start');
+  await expect(summary).not.toContainText('180');
+  await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-program.png' });
+  await summary.click();
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('spinbutton', { name: 'Cooking time', exact: true })).toHaveCount(0);
+  await expect(page.locator('air-fryer-card .cook-settings')).toContainText('The fryer supplies temperature and time when this program starts');
+  await page.evaluate(() => {
+    const p = (window as any).preview, f = p.sample;
+    f.ha.states[f.ids.target_temperature].state = '200'; f.ha.states[f.ids.target_time].state = '25'; p.update();
+  });
+  await expect(summary).not.toContainText('200');
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+  await page.getByRole('button', { name: 'Discard program selection', exact: true }).click();
+  await expect(summary).toContainText('200 °C · 25 min');
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('200');
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await page.locator('#locale').click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+test('cooking view keeps setup in More settings and shows live reported edits when expanded', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.locator('air-fryer-card .cook-settings summary').click();
+  await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
+  await expect(page.locator('air-fryer-card .cook-settings')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeHidden();
+  await expect(page.getByRole('spinbutton', { name: 'Cooking time', exact: true })).toBeHidden();
+  await expect(page.getByRole('checkbox', { name: 'Preheat', exact: true })).toBeHidden();
+  await expect(page.locator('air-fryer-card .hero')).toContainText('18 min');
+  await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-cooking.png' });
+  await page.evaluate(() => {
+    const p = (window as any).preview, f = p.sample;
+    f.ha.states[f.ids.target_temperature].state = '200'; f.ha.states[f.ids.target_time].state = '25'; p.update();
+  });
+  await page.getByText('More settings', { exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('200');
+  await expect(page.getByRole('spinbutton', { name: 'Cooking time', exact: true })).toHaveValue('25');
+  await page.getByRole('spinbutton', { name: 'Temperature', exact: true }).fill('205');
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(2);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled();
+  await expect(page.locator('air-fryer-card .cook-settings')).toHaveCount(0);
+});
+test('numeric drafts can be discarded without a service call and block program selection', async ({ page }) => {
+  await page.locator('air-fryer-card .cook-settings summary').click();
+  await page.getByRole('spinbutton', { name: 'Temperature', exact: true }).fill('195');
+  await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
+  await expect(page.locator('air-fryer-card .cook-settings summary')).toContainText('180 °C · 20 min');
+  await expect(page.getByRole('combobox', { name: 'Program', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
+});
+test('unsupported power is absent from the main card and explained in discovery details', async ({ page }) => {
+  await expect(page.locator('air-fryer-card .power-section')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Turn off', exact: true })).toHaveCount(0);
+  await page.locator('air-fryer-card summary').filter({ hasText: 'Discovery details' }).click();
   await expect(page.locator('air-fryer-card')).toContainText('Use the appliance’s power button');
   expect(await page.evaluate(() => (window as any).preview.sample.calls.length)).toBe(0);
 });
@@ -128,6 +196,7 @@ test('accepted command stays pending until a reported state arrives and exposes 
   await page.evaluate(() => {
     const p = (window as any).preview;
     p.sample.ha.callService = async () => {};
+    p.update();
     p.stopUpdates();
   });
   await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
@@ -177,6 +246,7 @@ test('discovered power button is on the main card and works with offline cooking
 });
 test('offline state keeps controls and recovers without reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Offline', exact: true }).click();
+  await page.locator('air-fryer-card .cook-settings summary').click();
   await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeDisabled();
   await expect(page.locator('air-fryer-card')).toContainText('may be switched off');
   await page.getByRole('button', { name: 'Ready', exact: true }).click();
@@ -203,6 +273,7 @@ test('unrecognized states keep raw label and withhold cycle commands', async ({ 
   await expect(page.getByRole('button', { name: 'Start cooking', exact: true })).toHaveCount(0);
 });
 test('entity labels remain text and number edits survive HA state updates', async ({ page }) => {
+  await page.locator('air-fryer-card .cook-settings summary').click();
   const input = page.getByRole('spinbutton', { name: 'Temperature', exact: true });
   await input.fill('195'); await page.waitForTimeout(450); await expect(input).toHaveValue('195');
   await page.evaluate(() => { (window as any).preview.card.setConfig({ type: 'custom:air-fryer-card', title: '<img src=x onerror=alert(1)>' }); });
@@ -227,11 +298,15 @@ test('automatically selected card never switches to a different fryer', async ({
 });
 test('mobile dark and light layouts fit, and save review screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 1000 });
-  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-dark.png' });
   await page.locator('#theme').click();
   await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-light.png' });
+  await page.locator('air-fryer-card .cook-settings summary').click();
+  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.locator('air-fryer-card').screenshot({ path: 'docs/images/card-settings.png' });
 });
 test('production bundle registers and controls the fixture without external runtime files', async ({ page }) => {
   await page.route('**/production-preview', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body></body></html>' }));
@@ -253,7 +328,7 @@ test('production bundle registers and controls the fixture without external runt
     card.setConfig({ type: 'custom:air-fryer-card' }); card.hass = f.ha;
     document.body.append(card); (window as any).bundleFixture = f;
   });
-  await expect(page.getByRole('spinbutton', { name: 'Temperature', exact: true })).toHaveValue('180');
+  await expect(page.locator('air-fryer-card .cook-settings summary')).toContainText('180 °C · 20 min');
   expect(await page.evaluate(() => (window as any).bundleFixture.calls)).toEqual([]);
   await page.getByRole('button', { name: 'Start cooking', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled({ timeout: 2500 });
